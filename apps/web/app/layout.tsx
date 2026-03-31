@@ -16,6 +16,8 @@ const navItems = [
   { href: "/proveedores", label: "Proveedores" },
   { href: "/instituciones", label: "Instituciones" },
   { href: "/red", label: "Red" },
+  { href: "/concentracion", label: "HHI" },
+  { href: "/alertas", label: "Alertas" },
 ];
 
 export default function RootLayout({
