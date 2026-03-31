@@ -27,29 +27,29 @@ function formatearMonto(valor: string | null): string {
 export default function PaginaContratos() {
   const router = useRouter();
 
-  // Leer filtros iniciales de URL
-  const [urlParams] = useState(() => {
-    if (typeof window === "undefined") return { p: "", i: "", q: "" };
-    const sp = new URLSearchParams(window.location.search);
-    return {
-      p: sp.get("proveedor_id") ?? "",
-      i: sp.get("institucion_id") ?? "",
-      q: sp.get("busqueda") ?? "",
-    };
-  });
-
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [total, setTotal] = useState(0);
   const [pagina, setPagina] = useState(1);
-  const [busqueda, setBusqueda] = useState(urlParams.q);
-  const [proveedorId, setProveedorId] = useState(urlParams.p);
-  const [institucionId, setInstitucionId] = useState(urlParams.i);
+  const [busqueda, setBusqueda] = useState("");
+  const [proveedorId, setProveedorId] = useState("");
+  const [institucionId, setInstitucionId] = useState("");
   const [proveedorNombre, setProveedorNombre] = useState("");
   const [institucionNombre, setInstitucionNombre] = useState("");
   const [cargando, setCargando] = useState(true);
+  const [listo, setListo] = useState(false);
   const { sort, toggleSort } = useSorting("fecha_firma");
 
+  // Leer filtros de URL al montar (antes del primer fetch)
   useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    setProveedorId(sp.get("proveedor_id") ?? "");
+    setInstitucionId(sp.get("institucion_id") ?? "");
+    setBusqueda(sp.get("busqueda") ?? "");
+    setListo(true);
+  }, []);
+
+  useEffect(() => {
+    if (!listo) return;
     setCargando(true);
     const params = new URLSearchParams({
       pagina: String(pagina),
@@ -77,7 +77,7 @@ export default function PaginaContratos() {
         }
       })
       .finally(() => setCargando(false));
-  }, [pagina, busqueda, proveedorId, institucionId, sort.columna, sort.direccion]);
+  }, [listo, pagina, busqueda, proveedorId, institucionId, sort.columna, sort.direccion]);
 
   const totalPaginas = Math.ceil(total / 20);
 
