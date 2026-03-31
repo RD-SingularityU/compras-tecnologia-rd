@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(turbo run:*)",
+      "Bash(ls \"apps/web/.next/server/app/\\(dashboard\\)/\")",
+      "Bash(mv \"\\(dashboard\\)/layout.tsx\" layout-dashboard.tsx.tmp)",
+      "Bash(mv \"\\(dashboard\\)/page.tsx\" page-dashboard.tsx.tmp)",
+      "Bash(mv \"\\(dashboard\\)/dashboard-charts.tsx\" dashboard-charts.tsx.tmp)",
+      "Bash(cp -r \"\\(dashboard\\)/contratos\" .)",
+      "Bash(cp -r \"\\(dashboard\\)/proveedores\" .)"
+    ]
+  }
+}
