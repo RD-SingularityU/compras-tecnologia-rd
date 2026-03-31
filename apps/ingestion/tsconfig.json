@@ -1,13 +1,17 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src",
+    "noEmit": true,
     "paths": {
       "@compras-rd/db": ["../../packages/db/src"],
+      "@compras-rd/db/*": ["../../packages/db/*"],
       "@compras-rd/ocds": ["../../packages/ocds/src"]
     }
   },
-  "include": ["src/**/*.ts"],
+  "include": [
+    "src/**/*.ts",
+    "../../packages/db/src/**/*.ts",
+    "../../packages/ocds/src/**/*.ts"
+  ],
   "exclude": ["node_modules", "dist"]
 }

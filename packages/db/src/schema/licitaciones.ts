@@ -8,7 +8,7 @@ import {
   numeric,
   index,
 } from "drizzle-orm/pg-core";
-import { instituciones } from "./instituciones.js";
+import { instituciones } from "./instituciones";
 
 export const licitaciones = pgTable(
   "licitaciones",

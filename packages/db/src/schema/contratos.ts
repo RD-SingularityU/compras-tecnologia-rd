@@ -7,9 +7,9 @@ import {
   index,
   primaryKey,
 } from "drizzle-orm/pg-core";
-import { adjudicaciones } from "./adjudicaciones.js";
-import { instituciones } from "./instituciones.js";
-import { proveedores } from "./proveedores.js";
+import { adjudicaciones } from "./adjudicaciones";
+import { instituciones } from "./instituciones";
+import { proveedores } from "./proveedores";
 
 export const contratos = pgTable(
   "contratos",

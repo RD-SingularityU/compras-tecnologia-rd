@@ -6,8 +6,8 @@ import {
   numeric,
   primaryKey,
 } from "drizzle-orm/pg-core";
-import { licitaciones } from "./licitaciones.js";
-import { proveedores } from "./proveedores.js";
+import { licitaciones } from "./licitaciones";
+import { proveedores } from "./proveedores";
 
 export const adjudicaciones = pgTable("adjudicaciones", {
   id: uuid("id").primaryKey().defaultRandom(),
