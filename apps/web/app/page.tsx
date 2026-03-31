@@ -24,13 +24,14 @@ async function obtenerEstadisticas() {
 
 async function obtenerTopProveedores() {
   const result = await getDb().execute(sql`
-    SELECT p.nombre, p.total_contratos, p.monto_total::float as monto
+    SELECT p.id, p.nombre, p.total_contratos, p.monto_total::float as monto
     FROM proveedores p
     WHERE p.total_contratos > 0
     ORDER BY p.monto_total::numeric DESC
     LIMIT 10
   `);
   return result.rows as Array<{
+    id: string;
     nombre: string;
     total_contratos: number;
     monto: number;

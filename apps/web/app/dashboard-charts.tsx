@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   BarChart,
   Bar,
@@ -10,6 +11,7 @@ import {
   LineChart,
   Line,
   CartesianGrid,
+  Cell,
 } from "recharts";
 
 function formatearMontoCorto(valor: number): string {
@@ -23,14 +25,19 @@ export function DashboardCharts({
   contratosPorMes,
 }: {
   topProveedores: Array<{
+    id: string;
     nombre: string;
     total_contratos: number;
     monto: number;
   }>;
   contratosPorMes: Array<{ mes: string; cantidad: number; monto: number }>;
 }) {
+  const router = useRouter();
+
   const proveedoresData = topProveedores.map((p) => ({
+    id: p.id,
     nombre: p.nombre.length > 25 ? p.nombre.slice(0, 25) + "..." : p.nombre,
+    nombreCompleto: p.nombre,
     monto: p.monto,
     contratos: p.total_contratos,
   }));
@@ -41,6 +48,9 @@ export function DashboardCharts({
       <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
         <h2 className="text-sm font-medium text-zinc-300 mb-4">
           Top 10 Proveedores por Monto
+          <span className="text-zinc-500 font-normal ml-2">
+            (click para ver contratos)
+          </span>
         </h2>
         {proveedoresData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
@@ -48,6 +58,17 @@ export function DashboardCharts({
               data={proveedoresData}
               layout="vertical"
               margin={{ left: 120, right: 20 }}
+              onClick={(state: Record<string, unknown>) => {
+                const payload = (
+                  state?.activePayload as
+                    | Array<{ payload: { id: string } }>
+                    | undefined
+                )?.[0]?.payload;
+                if (payload?.id) {
+                  router.push(`/contratos?proveedor_id=${payload.id}`);
+                }
+              }}
+              style={{ cursor: "pointer" }}
             >
               <XAxis
                 type="number"
@@ -65,6 +86,9 @@ export function DashboardCharts({
                   `RD$${Number(value).toLocaleString()}`,
                   "Monto",
                 ]}
+                labelFormatter={(_, payload) =>
+                  payload?.[0]?.payload?.nombreCompleto ?? ""
+                }
                 contentStyle={{
                   background: "#18181b",
                   border: "1px solid #27272a",
@@ -72,7 +96,15 @@ export function DashboardCharts({
                   color: "#e4e4e7",
                 }}
               />
-              <Bar dataKey="monto" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="monto" radius={[0, 4, 4, 0]}>
+                {proveedoresData.map((_, index) => (
+                  <Cell
+                    key={index}
+                    fill="#3b82f6"
+                    className="hover:fill-blue-400 transition-colors"
+                  />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         ) : (

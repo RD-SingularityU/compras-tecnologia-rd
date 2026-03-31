@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 
 interface Contrato {
   id: string;
@@ -23,49 +24,130 @@ function formatearMonto(valor: string | null): string {
 }
 
 export default function PaginaContratos() {
+  const router = useRouter();
+
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [total, setTotal] = useState(0);
   const [pagina, setPagina] = useState(1);
   const [busqueda, setBusqueda] = useState("");
+  const [proveedorId, setProveedorId] = useState("");
+  const [institucionId, setInstitucionId] = useState("");
+  const [proveedorNombre, setProveedorNombre] = useState("");
+  const [institucionNombre, setInstitucionNombre] = useState("");
   const [cargando, setCargando] = useState(true);
+  const [inicializado, setInicializado] = useState(false);
+
+  // Leer filtros de URL al montar
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("proveedor_id")) setProveedorId(params.get("proveedor_id")!);
+    if (params.get("institucion_id")) setInstitucionId(params.get("institucion_id")!);
+    if (params.get("busqueda")) setBusqueda(params.get("busqueda")!);
+    setInicializado(true);
+  }, []);
 
   useEffect(() => {
+    if (!inicializado) return;
     setCargando(true);
     const params = new URLSearchParams({
       pagina: String(pagina),
       limite: "20",
     });
     if (busqueda) params.set("busqueda", busqueda);
+    if (proveedorId) params.set("proveedor_id", proveedorId);
+    if (institucionId) params.set("institucion_id", institucionId);
 
     fetch(`/api/contratos?${params}`)
       .then((r) => r.json())
       .then((data) => {
         setContratos(data.datos);
         setTotal(data.total);
+        if (proveedorId && data.datos.length > 0 && !proveedorNombre) {
+          const prov = data.datos[0]?.proveedores?.find(
+            (p: { id: string }) => p.id === proveedorId
+          );
+          if (prov) setProveedorNombre(prov.nombre);
+        }
+        if (institucionId && data.datos.length > 0 && !institucionNombre) {
+          setInstitucionNombre(data.datos[0]?.institucion_nombre ?? "");
+        }
       })
       .finally(() => setCargando(false));
-  }, [pagina, busqueda]);
+  }, [pagina, busqueda, proveedorId, institucionId]);
 
   const totalPaginas = Math.ceil(total / 20);
+
+  function limpiarFiltro(campo: string) {
+    if (campo === "proveedor") {
+      setProveedorId("");
+      setProveedorNombre("");
+    } else {
+      setInstitucionId("");
+      setInstitucionNombre("");
+    }
+    setPagina(1);
+    const params = new URLSearchParams(window.location.search);
+    params.delete(campo === "proveedor" ? "proveedor_id" : "institucion_id");
+    router.replace(`/contratos?${params.toString()}`);
+  }
+
+  function filtrarPorProveedor(id: string, nombre: string) {
+    setProveedorId(id);
+    setProveedorNombre(nombre);
+    setPagina(1);
+  }
+
+  function filtrarPorInstitucion(id: string, nombre: string) {
+    setInstitucionId(id);
+    setInstitucionNombre(nombre);
+    setPagina(1);
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Contratos</h1>
-          <p className="text-sm text-zinc-400">{total.toLocaleString()} contratos</p>
+          <p className="text-sm text-zinc-400">
+            {total.toLocaleString()} contratos
+          </p>
         </div>
         <input
           type="text"
-          placeholder="Buscar contratos..."
+          placeholder="Buscar por titulo o descripcion..."
           value={busqueda}
           onChange={(e) => {
             setBusqueda(e.target.value);
             setPagina(1);
           }}
-          className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 w-64 focus:outline-none focus:border-blue-500"
+          className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 w-72 focus:outline-none focus:border-blue-500"
         />
       </div>
+
+      {/* Filtros activos */}
+      {(proveedorId || institucionId) && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-zinc-500">Filtros:</span>
+          {proveedorId && (
+            <button
+              onClick={() => limpiarFiltro("proveedor")}
+              className="inline-flex items-center gap-1 rounded-full border border-blue-400/30 bg-blue-400/10 px-3 py-1 text-xs text-blue-400 hover:bg-blue-400/20"
+            >
+              Proveedor: {proveedorNombre || proveedorId.slice(0, 8)}
+              <span className="ml-1">×</span>
+            </button>
+          )}
+          {institucionId && (
+            <button
+              onClick={() => limpiarFiltro("institucion")}
+              className="inline-flex items-center gap-1 rounded-full border border-green-400/30 bg-green-400/10 px-3 py-1 text-xs text-green-400 hover:bg-green-400/20"
+            >
+              Institucion: {institucionNombre || institucionId.slice(0, 8)}
+              <span className="ml-1">×</span>
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="rounded-lg border border-zinc-800 overflow-hidden">
         <table className="w-full text-sm">
@@ -107,21 +189,48 @@ export default function PaginaContratos() {
                   key={c.id}
                   className="border-b border-zinc-800/50 hover:bg-zinc-900/50"
                 >
-                  <td className="px-4 py-3">
-                    <a
-                      href={`/contratos/${c.id}`}
-                      className="text-zinc-200 hover:text-blue-400"
-                    >
+                  <td className="px-4 py-3 max-w-xs">
+                    <span className="text-zinc-200 line-clamp-1">
                       {c.titulo || c.ocid || "Sin titulo"}
-                    </a>
+                    </span>
                   </td>
-                  <td className="px-4 py-3 text-zinc-400">
-                    {c.institucion_nombre || "—"}
+                  <td className="px-4 py-3">
+                    {c.institucion_id ? (
+                      <button
+                        onClick={() =>
+                          filtrarPorInstitucion(
+                            c.institucion_id,
+                            c.institucion_nombre
+                          )
+                        }
+                        className="text-zinc-400 hover:text-green-400 text-left text-xs"
+                        title="Filtrar por esta institucion"
+                      >
+                        {c.institucion_nombre || "—"}
+                      </button>
+                    ) : (
+                      <span className="text-zinc-500">—</span>
+                    )}
                   </td>
-                  <td className="px-4 py-3 text-zinc-400">
-                    {c.proveedores?.length > 0
-                      ? c.proveedores.map((p) => p.nombre).join(", ")
-                      : "—"}
+                  <td className="px-4 py-3">
+                    {c.proveedores?.length > 0 ? (
+                      <div className="flex flex-col gap-0.5">
+                        {c.proveedores.map((p) => (
+                          <button
+                            key={p.id}
+                            onClick={() =>
+                              filtrarPorProveedor(p.id, p.nombre)
+                            }
+                            className="text-zinc-400 hover:text-blue-400 text-left text-xs"
+                            title="Filtrar por este proveedor"
+                          >
+                            {p.nombre}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-zinc-500">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right font-mono text-zinc-200">
                     {formatearMonto(c.valor)}
@@ -138,7 +247,6 @@ export default function PaginaContratos() {
         </table>
       </div>
 
-      {/* Paginacion */}
       {totalPaginas > 1 && (
         <div className="flex items-center justify-center gap-2">
           <button
