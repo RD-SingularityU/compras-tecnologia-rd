@@ -35,19 +35,19 @@ export default function PaginaContratos() {
   const [proveedorNombre, setProveedorNombre] = useState("");
   const [institucionNombre, setInstitucionNombre] = useState("");
   const [cargando, setCargando] = useState(true);
-  const [inicializado, setInicializado] = useState(false);
 
   // Leer filtros de URL al montar
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("proveedor_id")) setProveedorId(params.get("proveedor_id")!);
-    if (params.get("institucion_id")) setInstitucionId(params.get("institucion_id")!);
-    if (params.get("busqueda")) setBusqueda(params.get("busqueda")!);
-    setInicializado(true);
+    const pId = params.get("proveedor_id") ?? "";
+    const iId = params.get("institucion_id") ?? "";
+    const q = params.get("busqueda") ?? "";
+    if (pId) setProveedorId(pId);
+    if (iId) setInstitucionId(iId);
+    if (q) setBusqueda(q);
   }, []);
 
   useEffect(() => {
-    if (!inicializado) return;
     setCargando(true);
     const params = new URLSearchParams({
       pagina: String(pagina),
