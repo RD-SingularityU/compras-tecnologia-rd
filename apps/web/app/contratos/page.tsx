@@ -27,27 +27,27 @@ function formatearMonto(valor: string | null): string {
 export default function PaginaContratos() {
   const router = useRouter();
 
+  // Leer filtros iniciales de URL
+  const [urlParams] = useState(() => {
+    if (typeof window === "undefined") return { p: "", i: "", q: "" };
+    const sp = new URLSearchParams(window.location.search);
+    return {
+      p: sp.get("proveedor_id") ?? "",
+      i: sp.get("institucion_id") ?? "",
+      q: sp.get("busqueda") ?? "",
+    };
+  });
+
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [total, setTotal] = useState(0);
   const [pagina, setPagina] = useState(1);
-  const [busqueda, setBusqueda] = useState("");
-  const [proveedorId, setProveedorId] = useState("");
-  const [institucionId, setInstitucionId] = useState("");
+  const [busqueda, setBusqueda] = useState(urlParams.q);
+  const [proveedorId, setProveedorId] = useState(urlParams.p);
+  const [institucionId, setInstitucionId] = useState(urlParams.i);
   const [proveedorNombre, setProveedorNombre] = useState("");
   const [institucionNombre, setInstitucionNombre] = useState("");
   const [cargando, setCargando] = useState(true);
   const { sort, toggleSort } = useSorting("fecha_firma");
-
-  // Leer filtros de URL al montar
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const pId = params.get("proveedor_id") ?? "";
-    const iId = params.get("institucion_id") ?? "";
-    const q = params.get("busqueda") ?? "";
-    if (pId) setProveedorId(pId);
-    if (iId) setInstitucionId(iId);
-    if (q) setBusqueda(q);
-  }, []);
 
   useEffect(() => {
     setCargando(true);
