@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSorting, SortHeader } from "@/lib/use-sorting";
 
 interface Contrato {
   id: string;
@@ -35,6 +36,7 @@ export default function PaginaContratos() {
   const [proveedorNombre, setProveedorNombre] = useState("");
   const [institucionNombre, setInstitucionNombre] = useState("");
   const [cargando, setCargando] = useState(true);
+  const { sort, toggleSort } = useSorting("fecha_firma");
 
   // Leer filtros de URL al montar
   useEffect(() => {
@@ -53,6 +55,8 @@ export default function PaginaContratos() {
       pagina: String(pagina),
       limite: "20",
     });
+    params.set("ordenar", sort.columna);
+    params.set("dir", sort.direccion);
     if (busqueda) params.set("busqueda", busqueda);
     if (proveedorId) params.set("proveedor_id", proveedorId);
     if (institucionId) params.set("institucion_id", institucionId);
@@ -73,7 +77,7 @@ export default function PaginaContratos() {
         }
       })
       .finally(() => setCargando(false));
-  }, [pagina, busqueda, proveedorId, institucionId]);
+  }, [pagina, busqueda, proveedorId, institucionId, sort.columna, sort.direccion]);
 
   const totalPaginas = Math.ceil(total / 20);
 
@@ -153,21 +157,11 @@ export default function PaginaContratos() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-zinc-800 bg-zinc-900/50">
-              <th className="text-left px-4 py-3 text-zinc-400 font-medium">
-                Titulo
-              </th>
-              <th className="text-left px-4 py-3 text-zinc-400 font-medium">
-                Institucion
-              </th>
-              <th className="text-left px-4 py-3 text-zinc-400 font-medium">
-                Proveedor
-              </th>
-              <th className="text-right px-4 py-3 text-zinc-400 font-medium">
-                Valor
-              </th>
-              <th className="text-left px-4 py-3 text-zinc-400 font-medium">
-                Fecha
-              </th>
+              <SortHeader columna="titulo" label="Titulo" sort={sort} onSort={toggleSort} className="text-left" />
+              <SortHeader columna="institucion" label="Institucion" sort={sort} onSort={toggleSort} className="text-left" />
+              <th className="text-left px-4 py-3 text-zinc-400 font-medium">Proveedor</th>
+              <SortHeader columna="valor" label="Valor" sort={sort} onSort={toggleSort} className="text-right" />
+              <SortHeader columna="fecha_firma" label="Fecha" sort={sort} onSort={toggleSort} className="text-left" />
             </tr>
           </thead>
           <tbody>

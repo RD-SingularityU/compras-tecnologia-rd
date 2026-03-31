@@ -8,7 +8,16 @@ export async function GET(request: Request) {
   const busqueda = searchParams.get("busqueda") ?? "";
   const institucionId = searchParams.get("institucion_id");
   const proveedorId = searchParams.get("proveedor_id");
+  const ordenar = searchParams.get("ordenar") ?? "fecha_firma";
+  const direccion = searchParams.get("dir") === "asc" ? "ASC" : "DESC";
   const offset = (pagina - 1) * limite;
+
+  const columnasValidas: Record<string, string> = {
+    titulo: "c.titulo",
+    valor: "c.valor::numeric",
+    fecha_firma: "c.fecha_firma",
+    institucion: "i.nombre",
+  };
 
   const condiciones: string[] = [];
   if (busqueda) {
@@ -41,7 +50,7 @@ export async function GET(request: Request) {
       FROM contratos c
       LEFT JOIN instituciones i ON i.id = c.institucion_id
       ${where}
-      ORDER BY c.fecha_firma DESC NULLS LAST
+      ORDER BY ${columnasValidas[ordenar] ?? "c.fecha_firma"} ${direccion} NULLS LAST
       LIMIT ${limite} OFFSET ${offset}
     `)),
     getDb().execute(sql.raw(`SELECT COUNT(*) as total FROM contratos c ${where}`)),

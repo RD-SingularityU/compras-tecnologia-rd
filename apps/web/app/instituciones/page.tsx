@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSorting, SortHeader } from "@/lib/use-sorting";
 
 interface Institucion {
   id: string;
@@ -26,12 +27,15 @@ export default function PaginaInstituciones() {
   const [pagina, setPagina] = useState(1);
   const [busqueda, setBusqueda] = useState("");
   const [cargando, setCargando] = useState(true);
+  const { sort, toggleSort } = useSorting("monto_total");
 
   useEffect(() => {
     setCargando(true);
     const params = new URLSearchParams({
       pagina: String(pagina),
       limite: "20",
+      ordenar: sort.columna,
+      dir: sort.direccion,
     });
     if (busqueda) params.set("busqueda", busqueda);
 
@@ -42,7 +46,7 @@ export default function PaginaInstituciones() {
         setTotal(data.total);
       })
       .finally(() => setCargando(false));
-  }, [pagina, busqueda]);
+  }, [pagina, busqueda, sort.columna, sort.direccion]);
 
   const totalPaginas = Math.ceil(total / 20);
 
@@ -71,18 +75,10 @@ export default function PaginaInstituciones() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-zinc-800 bg-zinc-900/50">
-              <th className="text-left px-4 py-3 text-zinc-400 font-medium">
-                Institucion
-              </th>
-              <th className="text-right px-4 py-3 text-zinc-400 font-medium">
-                Contratos
-              </th>
-              <th className="text-right px-4 py-3 text-zinc-400 font-medium">
-                Monto Total
-              </th>
-              <th className="text-right px-4 py-3 text-zinc-400 font-medium">
-                Proveedores
-              </th>
+              <SortHeader columna="nombre" label="Institucion" sort={sort} onSort={toggleSort} className="text-left" />
+              <SortHeader columna="total_contratos" label="Contratos" sort={sort} onSort={toggleSort} className="text-right" />
+              <SortHeader columna="monto_total" label="Monto Total" sort={sort} onSort={toggleSort} className="text-right" />
+              <SortHeader columna="num_proveedores" label="Proveedores" sort={sort} onSort={toggleSort} className="text-right" />
             </tr>
           </thead>
           <tbody>

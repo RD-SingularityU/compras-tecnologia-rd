@@ -6,7 +6,16 @@ export async function GET(request: Request) {
   const pagina = parseInt(searchParams.get("pagina") ?? "1");
   const limite = Math.min(parseInt(searchParams.get("limite") ?? "20"), 100);
   const busqueda = searchParams.get("busqueda") ?? "";
+  const ordenar = searchParams.get("ordenar") ?? "monto_total";
+  const direccion = searchParams.get("dir") === "asc" ? "ASC" : "DESC";
   const offset = (pagina - 1) * limite;
+
+  const columnasValidas: Record<string, string> = {
+    nombre: "i.nombre",
+    total_contratos: "total_contratos",
+    monto_total: "monto_total",
+    num_proveedores: "num_proveedores",
+  };
 
   const where = busqueda
     ? `WHERE i.nombre ILIKE '%${busqueda.replace(/'/g, "''")}%'`
@@ -22,7 +31,7 @@ export async function GET(request: Request) {
               WHERE c.institucion_id = i.id) as num_proveedores
       FROM instituciones i
       ${where}
-      ORDER BY (SELECT COALESCE(SUM(c.valor::numeric), 0) FROM contratos c WHERE c.institucion_id = i.id) DESC
+      ORDER BY ${columnasValidas[ordenar] ?? "monto_total"} ${direccion} NULLS LAST
       LIMIT ${limite} OFFSET ${offset}
     `)),
     getDb().execute(
