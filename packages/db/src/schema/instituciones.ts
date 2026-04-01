@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, jsonb, timestamp, index } from "drizzle-orm/pg-core";
 
 export const instituciones = pgTable("instituciones", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -10,4 +10,6 @@ export const instituciones = pgTable("instituciones", {
   sector: text("sector"),
   creadoEn: timestamp("creado_en", { withTimezone: true }).defaultNow(),
   actualizadoEn: timestamp("actualizado_en", { withTimezone: true }).defaultNow(),
-});
+}, (table) => [
+  index("instituciones_sector_idx").on(table.sector),
+]);

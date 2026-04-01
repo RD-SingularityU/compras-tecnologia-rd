@@ -33,5 +33,6 @@ export const licitaciones = pgTable(
   (table) => [
     index("licitaciones_institucion_idx").on(table.institucionId),
     index("licitaciones_fecha_idx").on(table.fechaPublicacion),
+    index("licitaciones_metodo_idx").on(table.metodoAdquisicion),
   ]
 );

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb, sql } from "@/lib/db";
+import { construirCondicionesFiltros, construirSubCondicionesContratos } from "@/lib/construir-filtros-sql";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -17,18 +18,27 @@ export async function GET(request: Request) {
     num_proveedores: "num_proveedores",
   };
 
-  const where = busqueda
-    ? `WHERE i.nombre ILIKE '%${busqueda.replace(/'/g, "''")}%'`
-    : "";
+  // Filtros globales
+  const { condiciones } = construirCondicionesFiltros(searchParams, "instituciones");
+
+  if (busqueda) {
+    condiciones.push(`i.nombre ILIKE '%${busqueda.replace(/'/g, "''")}%'`);
+  }
+
+  const where =
+    condiciones.length > 0 ? `WHERE ${condiciones.join(" AND ")}` : "";
+
+  // Sub-condiciones de contratos para los agregados
+  const subCond = construirSubCondicionesContratos(searchParams, "c");
 
   const [datos, conteo] = await Promise.all([
     getDb().execute(sql.raw(`
       SELECT i.id, i.nombre, i.rnc, i.sector,
-             (SELECT COUNT(*) FROM contratos c WHERE c.institucion_id = i.id) as total_contratos,
-             (SELECT COALESCE(SUM(c.valor::numeric), 0) FROM contratos c WHERE c.institucion_id = i.id) as monto_total,
+             (SELECT COUNT(*) FROM contratos c WHERE c.institucion_id = i.id${subCond}) as total_contratos,
+             (SELECT COALESCE(SUM(c.valor::numeric), 0) FROM contratos c WHERE c.institucion_id = i.id${subCond}) as monto_total,
              (SELECT COUNT(DISTINCT cp.proveedor_id)
               FROM contratos c JOIN contrato_proveedores cp ON cp.contrato_id = c.id
-              WHERE c.institucion_id = i.id) as num_proveedores
+              WHERE c.institucion_id = i.id${subCond}) as num_proveedores
       FROM instituciones i
       ${where}
       ORDER BY ${columnasValidas[ordenar] ?? "monto_total"} ${direccion} NULLS LAST

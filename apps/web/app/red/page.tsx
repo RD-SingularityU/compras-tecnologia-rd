@@ -1,6 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { BarraFiltrosGlobales } from "@/components/barra-filtros-globales";
+import { useState, useCallback } from "react";
+import type { FiltrosGlobales } from "@/lib/filtros-globales";
 
 const GrafoRed = dynamic(() => import("./grafo-red").then((m) => m.GrafoRed), {
   ssr: false,
@@ -12,6 +15,17 @@ const GrafoRed = dynamic(() => import("./grafo-red").then((m) => m.GrafoRed), {
 });
 
 export default function PaginaRed() {
+  const [filtrosGlobales, setFiltrosGlobales] = useState<FiltrosGlobales>({});
+  const [listo, setListo] = useState(false);
+
+  const onFiltrosChange = useCallback((filtros: FiltrosGlobales) => {
+    setFiltrosGlobales(filtros);
+  }, []);
+
+  const onBarraLista = useCallback(() => {
+    setListo(true);
+  }, []);
+
   return (
     <div className="space-y-4">
       <div>
@@ -22,7 +36,12 @@ export default function PaginaRed() {
           de las lineas representa el volumen de contratos.
         </p>
       </div>
-      <GrafoRed />
+      <BarraFiltrosGlobales
+        pagina="red"
+        onFiltrosChange={onFiltrosChange}
+        onListo={onBarraLista}
+      />
+      {listo && <GrafoRed filtrosGlobales={filtrosGlobales} />}
     </div>
   );
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useCallback } from "react";
 import { useSorting, SortHeader } from "@/lib/use-sorting";
+import { BarraFiltrosGlobales } from "@/components/barra-filtros-globales";
+import type { FiltrosGlobales } from "@/lib/filtros-globales";
 
 interface Contrato {
   id: string;
@@ -19,32 +20,36 @@ interface Contrato {
 }
 
 function formatearMonto(valor: string | null): string {
-  if (!valor) return "—";
+  if (!valor) return "\u2014";
   const num = parseFloat(valor);
   return `RD$${num.toLocaleString("es-DO", { minimumFractionDigits: 2 })}`;
 }
 
 export default function PaginaContratos() {
-  const router = useRouter();
-
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [total, setTotal] = useState(0);
   const [pagina, setPagina] = useState(1);
   const [busqueda, setBusqueda] = useState("");
   const [proveedorId, setProveedorId] = useState("");
-  const [institucionId, setInstitucionId] = useState("");
   const [proveedorNombre, setProveedorNombre] = useState("");
-  const [institucionNombre, setInstitucionNombre] = useState("");
   const [cargando, setCargando] = useState(true);
+  const [filtrosGlobales, setFiltrosGlobales] = useState<FiltrosGlobales>({});
   const [listo, setListo] = useState(false);
   const { sort, toggleSort } = useSorting("fecha_firma");
 
-  // Leer filtros de URL al montar (antes del primer fetch)
+  // Leer proveedor_id de URL al montar
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
     setProveedorId(sp.get("proveedor_id") ?? "");
-    setInstitucionId(sp.get("institucion_id") ?? "");
     setBusqueda(sp.get("busqueda") ?? "");
+  }, []);
+
+  const onFiltrosChange = useCallback((filtros: FiltrosGlobales) => {
+    setFiltrosGlobales(filtros);
+    setPagina(1);
+  }, []);
+
+  const onBarraLista = useCallback(() => {
     setListo(true);
   }, []);
 
@@ -54,12 +59,15 @@ export default function PaginaContratos() {
     const params = new URLSearchParams({
       pagina: String(pagina),
       limite: "20",
+      ordenar: sort.columna,
+      dir: sort.direccion,
     });
-    params.set("ordenar", sort.columna);
-    params.set("dir", sort.direccion);
     if (busqueda) params.set("busqueda", busqueda);
     if (proveedorId) params.set("proveedor_id", proveedorId);
-    if (institucionId) params.set("institucion_id", institucionId);
+    // Agregar filtros globales
+    for (const [clave, valor] of Object.entries(filtrosGlobales)) {
+      if (valor) params.set(clave, valor);
+    }
 
     fetch(`/api/contratos?${params}`)
       .then((r) => r.json())
@@ -72,38 +80,21 @@ export default function PaginaContratos() {
           );
           if (prov) setProveedorNombre(prov.nombre);
         }
-        if (institucionId && data.datos.length > 0 && !institucionNombre) {
-          setInstitucionNombre(data.datos[0]?.institucion_nombre ?? "");
-        }
       })
       .finally(() => setCargando(false));
-  }, [listo, pagina, busqueda, proveedorId, institucionId, sort.columna, sort.direccion]);
+  }, [listo, pagina, busqueda, proveedorId, sort.columna, sort.direccion, filtrosGlobales]);
 
   const totalPaginas = Math.ceil(total / 20);
 
-  function limpiarFiltro(campo: string) {
-    if (campo === "proveedor") {
-      setProveedorId("");
-      setProveedorNombre("");
-    } else {
-      setInstitucionId("");
-      setInstitucionNombre("");
-    }
+  function limpiarProveedor() {
+    setProveedorId("");
+    setProveedorNombre("");
     setPagina(1);
-    const params = new URLSearchParams(window.location.search);
-    params.delete(campo === "proveedor" ? "proveedor_id" : "institucion_id");
-    router.replace(`/contratos?${params.toString()}`);
   }
 
   function filtrarPorProveedor(id: string, nombre: string) {
     setProveedorId(id);
     setProveedorNombre(nombre);
-    setPagina(1);
-  }
-
-  function filtrarPorInstitucion(id: string, nombre: string) {
-    setInstitucionId(id);
-    setInstitucionNombre(nombre);
     setPagina(1);
   }
 
@@ -128,28 +119,24 @@ export default function PaginaContratos() {
         />
       </div>
 
-      {/* Filtros activos */}
-      {(proveedorId || institucionId) && (
+      {/* Filtros globales */}
+      <BarraFiltrosGlobales
+        pagina="contratos"
+        onFiltrosChange={onFiltrosChange}
+        onListo={onBarraLista}
+      />
+
+      {/* Filtro de proveedor (propio de esta pagina) */}
+      {proveedorId && (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-zinc-500">Filtros:</span>
-          {proveedorId && (
-            <button
-              onClick={() => limpiarFiltro("proveedor")}
-              className="inline-flex items-center gap-1 rounded-full border border-blue-400/30 bg-blue-400/10 px-3 py-1 text-xs text-blue-400 hover:bg-blue-400/20"
-            >
-              Proveedor: {proveedorNombre || proveedorId.slice(0, 8)}
-              <span className="ml-1">×</span>
-            </button>
-          )}
-          {institucionId && (
-            <button
-              onClick={() => limpiarFiltro("institucion")}
-              className="inline-flex items-center gap-1 rounded-full border border-green-400/30 bg-green-400/10 px-3 py-1 text-xs text-green-400 hover:bg-green-400/20"
-            >
-              Institucion: {institucionNombre || institucionId.slice(0, 8)}
-              <span className="ml-1">×</span>
-            </button>
-          )}
+          <span className="text-xs text-zinc-500">Filtro adicional:</span>
+          <button
+            onClick={limpiarProveedor}
+            className="inline-flex items-center gap-1 rounded-full border border-blue-400/30 bg-blue-400/10 px-3 py-1 text-xs text-blue-400 hover:bg-blue-400/20"
+          >
+            Proveedor: {proveedorNombre || proveedorId.slice(0, 8)}
+            <span className="ml-1">&times;</span>
+          </button>
         </div>
       )}
 
@@ -190,20 +177,11 @@ export default function PaginaContratos() {
                   </td>
                   <td className="px-4 py-3">
                     {c.institucion_id ? (
-                      <button
-                        onClick={() =>
-                          filtrarPorInstitucion(
-                            c.institucion_id,
-                            c.institucion_nombre
-                          )
-                        }
-                        className="text-zinc-400 hover:text-green-400 text-left text-xs"
-                        title="Filtrar por esta institucion"
-                      >
-                        {c.institucion_nombre || "—"}
-                      </button>
+                      <span className="text-zinc-400 text-xs">
+                        {c.institucion_nombre || "\u2014"}
+                      </span>
                     ) : (
-                      <span className="text-zinc-500">—</span>
+                      <span className="text-zinc-500">&mdash;</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -223,7 +201,7 @@ export default function PaginaContratos() {
                         ))}
                       </div>
                     ) : (
-                      <span className="text-zinc-500">—</span>
+                      <span className="text-zinc-500">&mdash;</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right font-mono text-zinc-200">
@@ -232,7 +210,7 @@ export default function PaginaContratos() {
                   <td className="px-4 py-3 text-zinc-400 font-mono text-xs">
                     {c.fecha_firma
                       ? new Date(c.fecha_firma).toLocaleDateString("es-DO")
-                      : "—"}
+                      : "\u2014"}
                   </td>
                 </tr>
               ))

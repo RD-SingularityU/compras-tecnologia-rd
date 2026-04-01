@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Graph from "graphology";
 import Sigma from "sigma";
 import forceAtlas2 from "graphology-layout-forceatlas2";
+import type { FiltrosGlobales } from "@/lib/filtros-globales";
 
 interface NodoGrafo {
   id: string;
@@ -23,7 +24,7 @@ interface DatosGrafo {
   aristas: AristaGrafo[];
 }
 
-export function GrafoRed() {
+export function GrafoRed({ filtrosGlobales = {} }: { filtrosGlobales?: FiltrosGlobales }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sigmaRef = useRef<Sigma | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -43,8 +44,15 @@ export function GrafoRed() {
       setError(null);
 
       try {
+        const params = new URLSearchParams({
+          limite: "500",
+          min_contratos: String(minContratos),
+        });
+        for (const [clave, valor] of Object.entries(filtrosGlobales)) {
+          if (valor) params.set(clave, valor);
+        }
         const resp = await fetch(
-          `/api/grafo?limite=500&min_contratos=${minContratos}`,
+          `/api/grafo?${params}`,
           { signal: controller.signal }
         );
         if (!resp.ok) throw new Error("Error cargando grafo");
@@ -142,7 +150,7 @@ export function GrafoRed() {
         sigmaRef.current = null;
       }
     };
-  }, [minContratos]);
+  }, [minContratos, filtrosGlobales]);
 
   return (
     <div className="space-y-3">

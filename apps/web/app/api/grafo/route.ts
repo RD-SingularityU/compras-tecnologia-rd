@@ -1,17 +1,25 @@
 import { NextResponse } from "next/server";
 import { getDb, sql } from "@/lib/db";
+import { construirCondicionesFiltros } from "@/lib/construir-filtros-sql";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const limite = Math.min(parseInt(searchParams.get("limite") ?? "500"), 2000);
   const minContratos = parseInt(searchParams.get("min_contratos") ?? "1");
-  const tipo = searchParams.get("tipo") ?? "contrato"; // contrato | co-proveedor
+  const tipo = searchParams.get("tipo") ?? "contrato";
   const nodoId = searchParams.get("nodo_id");
 
-  let whereClause = `WHERE g.tipo_relacion = '${tipo}' AND g.num_contratos >= ${minContratos}`;
+  // Filtros globales
+  const { condiciones } = construirCondicionesFiltros(searchParams, "grafo");
+
+  // Filtros propios del grafo
+  condiciones.push(`g.tipo_relacion = '${tipo}'`);
+  condiciones.push(`g.num_contratos >= ${minContratos}`);
   if (nodoId) {
-    whereClause += ` AND (g.nodo_origen_id = '${nodoId}' OR g.nodo_destino_id = '${nodoId}')`;
+    condiciones.push(`(g.nodo_origen_id = '${nodoId}' OR g.nodo_destino_id = '${nodoId}')`);
   }
+
+  const where = `WHERE ${condiciones.join(" AND ")}`;
 
   const aristas = await getDb().execute(sql.raw(`
     SELECT g.nodo_origen_tipo, g.nodo_origen_id,
@@ -26,7 +34,7 @@ export async function GET(request: Request) {
              ELSE (SELECT nombre FROM proveedores WHERE id = g.nodo_destino_id)
            END as nombre_destino
     FROM grafo_aristas g
-    ${whereClause}
+    ${where}
     ORDER BY g.num_contratos DESC
     LIMIT ${limite}
   `));

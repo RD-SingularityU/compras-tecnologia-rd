@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb, sql } from "@/lib/db";
+import { construirCondicionesFiltros } from "@/lib/construir-filtros-sql";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -7,9 +8,17 @@ export async function GET(request: Request) {
   const severidad = searchParams.get("severidad");
   const limite = Math.min(parseInt(searchParams.get("limite") ?? "50"), 200);
 
-  let where = "WHERE 1=1";
-  if (tipo) where += ` AND a.tipo = '${tipo.replace(/'/g, "''")}'`;
-  if (severidad) where += ` AND a.severidad = '${severidad.replace(/'/g, "''")}'`;
+  // Filtros globales
+  const { condiciones } = construirCondicionesFiltros(searchParams, "alertas");
+
+  // Filtros propios
+  if (tipo) condiciones.push(`a.tipo = '${tipo.replace(/'/g, "''")}'`);
+  if (severidad) condiciones.push(`a.severidad = '${severidad.replace(/'/g, "''")}'`);
+
+  const where =
+    condiciones.length > 0
+      ? `WHERE ${condiciones.join(" AND ")}`
+      : "";
 
   const result = await getDb().execute(sql.raw(`
     SELECT
@@ -24,13 +33,16 @@ export async function GET(request: Request) {
     LIMIT ${limite}
   `));
 
+  // El resumen tambien se filtra
+  const resumenWhere = where.replace(/\ba\./g, "alertas_r.");
   const countResult = await getDb().execute(sql.raw(`
     SELECT
-      COUNT(*) FILTER (WHERE severidad = 'alta') as alta,
-      COUNT(*) FILTER (WHERE severidad = 'media') as media,
-      COUNT(*) FILTER (WHERE severidad = 'baja') as baja,
+      COUNT(*) FILTER (WHERE alertas_r.severidad = 'alta') as alta,
+      COUNT(*) FILTER (WHERE alertas_r.severidad = 'media') as media,
+      COUNT(*) FILTER (WHERE alertas_r.severidad = 'baja') as baja,
       COUNT(*) as total
-    FROM alertas
+    FROM alertas alertas_r
+    ${resumenWhere.replace(/\ba\./g, "alertas_r.")}
   `));
 
   return NextResponse.json({

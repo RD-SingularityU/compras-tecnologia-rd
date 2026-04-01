@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { getDb, sql } from "@/lib/db";
+import { construirCondicionesFiltros } from "@/lib/construir-filtros-sql";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const pagina = parseInt(searchParams.get("pagina") ?? "1");
   const limite = Math.min(parseInt(searchParams.get("limite") ?? "20"), 100);
   const busqueda = searchParams.get("busqueda") ?? "";
-  const institucionId = searchParams.get("institucion_id");
   const proveedorId = searchParams.get("proveedor_id");
   const ordenar = searchParams.get("ordenar") ?? "fecha_firma";
   const direccion = searchParams.get("dir") === "asc" ? "ASC" : "DESC";
@@ -19,14 +19,14 @@ export async function GET(request: Request) {
     institucion: "i.nombre",
   };
 
-  const condiciones: string[] = [];
+  // Filtros globales
+  const { condiciones, joinsExtra } = construirCondicionesFiltros(searchParams, "contratos");
+
+  // Filtros propios de esta pagina
   if (busqueda) {
     condiciones.push(
       `(c.titulo ILIKE '%${busqueda.replace(/'/g, "''")}%' OR c.descripcion ILIKE '%${busqueda.replace(/'/g, "''")}%')`
     );
-  }
-  if (institucionId) {
-    condiciones.push(`c.institucion_id = '${institucionId}'`);
   }
   if (proveedorId) {
     condiciones.push(
@@ -36,6 +36,7 @@ export async function GET(request: Request) {
 
   const where =
     condiciones.length > 0 ? `WHERE ${condiciones.join(" AND ")}` : "";
+  const joins = joinsExtra.join("\n      ");
 
   const [datos, conteo] = await Promise.all([
     getDb().execute(sql.raw(`
@@ -49,11 +50,18 @@ export async function GET(request: Request) {
              ) as proveedores
       FROM contratos c
       LEFT JOIN instituciones i ON i.id = c.institucion_id
+      ${joins}
       ${where}
       ORDER BY ${columnasValidas[ordenar] ?? "c.fecha_firma"} ${direccion} NULLS LAST
       LIMIT ${limite} OFFSET ${offset}
     `)),
-    getDb().execute(sql.raw(`SELECT COUNT(*) as total FROM contratos c ${where}`)),
+    getDb().execute(sql.raw(`
+      SELECT COUNT(*) as total
+      FROM contratos c
+      LEFT JOIN instituciones i ON i.id = c.institucion_id
+      ${joins}
+      ${where}
+    `)),
   ]);
 
   return NextResponse.json({

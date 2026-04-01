@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { BarraFiltrosGlobales } from "@/components/barra-filtros-globales";
+import type { FiltrosGlobales } from "@/lib/filtros-globales";
 
 interface Alerta {
   id: string;
@@ -44,12 +46,26 @@ export default function PaginaAlertas() {
   const [filtroTipo, setFiltroTipo] = useState<string>("");
   const [filtroSeveridad, setFiltroSeveridad] = useState<string>("");
   const [cargando, setCargando] = useState(true);
+  const [filtrosGlobales, setFiltrosGlobales] = useState<FiltrosGlobales>({});
+  const [listo, setListo] = useState(false);
+
+  const onFiltrosChange = useCallback((filtros: FiltrosGlobales) => {
+    setFiltrosGlobales(filtros);
+  }, []);
+
+  const onBarraLista = useCallback(() => {
+    setListo(true);
+  }, []);
 
   useEffect(() => {
+    if (!listo) return;
     setCargando(true);
     const params = new URLSearchParams();
     if (filtroTipo) params.set("tipo", filtroTipo);
     if (filtroSeveridad) params.set("severidad", filtroSeveridad);
+    for (const [clave, valor] of Object.entries(filtrosGlobales)) {
+      if (valor) params.set(clave, valor);
+    }
 
     fetch(`/api/alertas?${params}`)
       .then((r) => r.json())
@@ -58,7 +74,7 @@ export default function PaginaAlertas() {
         setResumen(data.resumen);
       })
       .finally(() => setCargando(false));
-  }, [filtroTipo, filtroSeveridad]);
+  }, [listo, filtroTipo, filtroSeveridad, filtrosGlobales]);
 
   return (
     <div className="space-y-6">
@@ -68,6 +84,13 @@ export default function PaginaAlertas() {
           Alertas automaticas detectadas en contrataciones publicas
         </p>
       </div>
+
+      {/* Filtros globales */}
+      <BarraFiltrosGlobales
+        pagina="alertas"
+        onFiltrosChange={onFiltrosChange}
+        onListo={onBarraLista}
+      />
 
       {/* Resumen */}
       {resumen && (
@@ -97,7 +120,7 @@ export default function PaginaAlertas() {
         </div>
       )}
 
-      {/* Filtros */}
+      {/* Filtros propios */}
       <div className="flex gap-3">
         <select
           value={filtroTipo}
@@ -155,7 +178,7 @@ export default function PaginaAlertas() {
                   href={`/${a.entidad_tipo === "proveedor" ? "proveedores" : a.entidad_tipo === "institucion" ? "instituciones" : "contratos"}/${a.entidad_id}`}
                   className="text-xs text-blue-400 hover:text-blue-300 shrink-0 ml-4"
                 >
-                  Ver detalle →
+                  Ver detalle &rarr;
                 </a>
               </div>
             </div>

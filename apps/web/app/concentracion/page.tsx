@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { BarraFiltrosGlobales } from "@/components/barra-filtros-globales";
+import type { FiltrosGlobales } from "@/lib/filtros-globales";
 
 interface DatosHhi {
   institucion_id: string;
@@ -26,13 +28,30 @@ function colorNivel(nivel: string): string {
 export default function PaginaConcentracion() {
   const [datos, setDatos] = useState<DatosHhi[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [filtrosGlobales, setFiltrosGlobales] = useState<FiltrosGlobales>({});
+  const [listo, setListo] = useState(false);
+
+  const onFiltrosChange = useCallback((filtros: FiltrosGlobales) => {
+    setFiltrosGlobales(filtros);
+  }, []);
+
+  const onBarraLista = useCallback(() => {
+    setListo(true);
+  }, []);
 
   useEffect(() => {
-    fetch("/api/concentracion")
+    if (!listo) return;
+    setCargando(true);
+    const params = new URLSearchParams();
+    for (const [clave, valor] of Object.entries(filtrosGlobales)) {
+      if (valor) params.set(clave, valor);
+    }
+
+    fetch(`/api/concentracion?${params}`)
       .then((r) => r.json())
       .then((data) => setDatos(data.datos ?? []))
       .finally(() => setCargando(false));
-  }, []);
+  }, [listo, filtrosGlobales]);
 
   const concentrados = datos.filter((d) => d.nivel === "concentrado").length;
   const moderados = datos.filter((d) => d.nivel === "moderado").length;
@@ -47,6 +66,12 @@ export default function PaginaConcentracion() {
           altamente concentrado, 1500-2500 = moderado, &lt; 1500 = competitivo.
         </p>
       </div>
+
+      <BarraFiltrosGlobales
+        pagina="concentracion"
+        onFiltrosChange={onFiltrosChange}
+        onListo={onBarraLista}
+      />
 
       {/* Resumen */}
       <div className="grid grid-cols-3 gap-4">
@@ -123,7 +148,7 @@ export default function PaginaConcentracion() {
                     </a>
                   </td>
                   <td className="px-4 py-3 text-right font-mono">
-                    {d.hhi?.toFixed(0) ?? "—"}
+                    {d.hhi?.toFixed(0) ?? "\u2014"}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span
@@ -136,7 +161,7 @@ export default function PaginaConcentracion() {
                     {d.num_proveedores}
                   </td>
                   <td className="px-4 py-3 text-zinc-400">
-                    {d.proveedor_dominante_nombre ?? "—"}
+                    {d.proveedor_dominante_nombre ?? "\u2014"}
                   </td>
                   <td className="px-4 py-3 text-right font-mono">
                     {d.porcentaje_dominante?.toFixed(1)}%

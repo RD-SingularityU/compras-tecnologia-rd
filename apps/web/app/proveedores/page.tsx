@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSorting, SortHeader } from "@/lib/use-sorting";
+import { BarraFiltrosGlobales } from "@/components/barra-filtros-globales";
+import type { FiltrosGlobales } from "@/lib/filtros-globales";
 
 interface Proveedor {
   id: string;
@@ -26,9 +28,21 @@ export default function PaginaProveedores() {
   const [pagina, setPagina] = useState(1);
   const [busqueda, setBusqueda] = useState("");
   const [cargando, setCargando] = useState(true);
+  const [filtrosGlobales, setFiltrosGlobales] = useState<FiltrosGlobales>({});
+  const [listo, setListo] = useState(false);
   const { sort, toggleSort } = useSorting("monto_total");
 
+  const onFiltrosChange = useCallback((filtros: FiltrosGlobales) => {
+    setFiltrosGlobales(filtros);
+    setPagina(1);
+  }, []);
+
+  const onBarraLista = useCallback(() => {
+    setListo(true);
+  }, []);
+
   useEffect(() => {
+    if (!listo) return;
     setCargando(true);
     const params = new URLSearchParams({
       pagina: String(pagina),
@@ -37,6 +51,9 @@ export default function PaginaProveedores() {
       dir: sort.direccion,
     });
     if (busqueda) params.set("busqueda", busqueda);
+    for (const [clave, valor] of Object.entries(filtrosGlobales)) {
+      if (valor) params.set(clave, valor);
+    }
 
     fetch(`/api/proveedores?${params}`)
       .then((r) => r.json())
@@ -45,7 +62,7 @@ export default function PaginaProveedores() {
         setTotal(data.total);
       })
       .finally(() => setCargando(false));
-  }, [pagina, busqueda, sort.columna, sort.direccion]);
+  }, [listo, pagina, busqueda, sort.columna, sort.direccion, filtrosGlobales]);
 
   const totalPaginas = Math.ceil(total / 20);
 
@@ -69,6 +86,12 @@ export default function PaginaProveedores() {
           className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 w-64 focus:outline-none focus:border-blue-500"
         />
       </div>
+
+      <BarraFiltrosGlobales
+        pagina="proveedores"
+        onFiltrosChange={onFiltrosChange}
+        onListo={onBarraLista}
+      />
 
       <div className="rounded-lg border border-zinc-800 overflow-hidden">
         <table className="w-full text-sm">
@@ -109,7 +132,7 @@ export default function PaginaProveedores() {
                     </a>
                   </td>
                   <td className="px-4 py-3 text-zinc-400 font-mono text-xs">
-                    {p.rnc || "—"}
+                    {p.rnc || "\u2014"}
                   </td>
                   <td className="px-4 py-3 text-right font-mono">
                     {p.total_contratos}
