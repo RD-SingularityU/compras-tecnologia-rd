@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   const columnasValidas: Record<string, string> = {
     titulo: "c.titulo",
     valor: "c.valor::numeric",
-    fecha_firma: "c.fecha_firma",
+    fecha_firma: "COALESCE(c.fecha_firma, c.periodo_inicio)",
     institucion: "i.nombre",
   };
 

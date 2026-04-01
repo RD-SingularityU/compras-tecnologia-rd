@@ -13,7 +13,8 @@ interface Contrato {
   estado: string;
   valor: string;
   moneda: string;
-  fecha_firma: string;
+  fecha_firma: string | null;
+  periodo_inicio: string | null;
   institucion_nombre: string;
   institucion_id: string;
   proveedores: Array<{ id: string; nombre: string; rnc: string }>;
@@ -208,8 +209,8 @@ export default function PaginaContratos() {
                     {formatearMonto(c.valor)}
                   </td>
                   <td className="px-4 py-3 text-zinc-400 font-mono text-xs">
-                    {c.fecha_firma
-                      ? new Date(c.fecha_firma).toLocaleDateString("es-DO")
+                    {(c.fecha_firma || c.periodo_inicio)
+                      ? new Date((c.fecha_firma || c.periodo_inicio)!).toLocaleDateString("es-DO")
                       : "\u2014"}
                   </td>
                 </tr>

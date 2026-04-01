@@ -94,6 +94,15 @@ export function normalizarRelease(release: Release): DatosNormalizados {
 
   const ocid = release.ocid;
 
+  // Helper: obtener el ID del comprador desde buyer o parties
+  function obtenerBuyerId(): string | null {
+    if (release.buyer?.id) return release.buyer.id;
+    const buyerParty = release.parties?.find(
+      (p) => p.roles?.includes("buyer") || p.roles?.includes("procuringEntity")
+    );
+    return buyerParty?.id ?? null;
+  }
+
   // Extraer organizaciones de parties
   if (release.parties) {
     for (const party of release.parties) {
@@ -154,7 +163,7 @@ export function normalizarRelease(release: Release): DatosNormalizados {
       titulo: t.title ?? null,
       descripcion: t.description ?? null,
       estado: t.status ?? null,
-      ocdsIdInstitucion: release.buyer?.id ?? null,
+      ocdsIdInstitucion: obtenerBuyerId(),
       metodoAdquisicion: t.procurementMethod ?? null,
       categoriaPrincipal: t.mainProcurementCategory ?? null,
       valorEstimado: t.value?.amount?.toString() ?? null,
@@ -220,7 +229,7 @@ export function normalizarRelease(release: Release): DatosNormalizados {
         ocdsId: contrato.id,
         ocid,
         ocdsIdAdjudicacion: contrato.awardID ?? null,
-        ocdsIdInstitucion: release.buyer?.id ?? null,
+        ocdsIdInstitucion: obtenerBuyerId(),
         titulo: contrato.title ?? null,
         descripcion: contrato.description ?? null,
         estado: contrato.status ?? null,
