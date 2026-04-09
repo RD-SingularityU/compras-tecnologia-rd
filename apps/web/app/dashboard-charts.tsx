@@ -4,16 +4,20 @@ import { useRouter } from "next/navigation";
 import {
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   CartesianGrid,
 } from "recharts";
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 function formatearMontoCorto(valor: number): string {
+  if (valor >= 1_000_000_000) return `${(valor / 1_000_000_000).toFixed(1)}B`;
   if (valor >= 1_000_000) return `${(valor / 1_000_000).toFixed(1)}M`;
   if (valor >= 1_000) return `${(valor / 1_000).toFixed(0)}K`;
   return valor.toFixed(0);
@@ -25,6 +29,69 @@ function formatearMonto(valor: number): string {
   if (valor >= 1_000) return `RD$${(valor / 1_000).toFixed(0)}K`;
   return `RD$${valor.toFixed(0)}`;
 }
+
+// Gradiente de colores para las barras (violet → cyan)
+const COLORES_BARRAS = [
+  "#8b5cf6",
+  "#7c6cf8",
+  "#6d7dfa",
+  "#5e8ef8",
+  "#4f9ef4",
+  "#40aef0",
+  "#31beed",
+  "#22ceea",
+  "#13dee7",
+  "#00d4ff",
+];
+
+// ── Tooltip personalizado ─────────────────────────────────────────────────────
+
+function TooltipOscuro({ active, payload, label }: {
+  active?: boolean;
+  payload?: Array<{ value: number; name: string; payload: { nombreCompleto?: string } }>;
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+  const nombre = payload[0]?.payload?.nombreCompleto ?? label ?? "";
+  return (
+    <div className="rounded-lg border border-slate-200 dark:border-[#2a2a40] bg-white dark:bg-[#0d0d1a] px-3 py-2 shadow-xl text-xs">
+      {nombre && (
+        <p className="font-medium text-slate-700 dark:text-zinc-200 mb-1 max-w-[200px] break-words">
+          {nombre}
+        </p>
+      )}
+      {payload.map((p, i) => (
+        <p key={i} className="text-slate-500 dark:text-zinc-400">
+          {p.name}: <span className="font-mono font-semibold text-slate-800 dark:text-zinc-200">
+            {formatearMonto(p.value)}
+          </span>
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function TooltipMes({ active, payload, label }: {
+  active?: boolean;
+  payload?: Array<{ value: number; name: string }>;
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border border-slate-200 dark:border-[#2a2a40] bg-white dark:bg-[#0d0d1a] px-3 py-2 shadow-xl text-xs">
+      <p className="font-medium text-slate-700 dark:text-zinc-200 mb-1">{label}</p>
+      {payload.map((p, i) => (
+        <p key={i} className="text-slate-500 dark:text-zinc-400">
+          {p.name}: <span className="font-mono font-semibold text-slate-800 dark:text-zinc-200">
+            {p.value.toLocaleString("es-DO")}
+          </span>
+        </p>
+      ))}
+    </div>
+  );
+}
+
+// ── Componente principal ──────────────────────────────────────────────────────
 
 export function DashboardCharts({
   topProveedores,
@@ -42,7 +109,7 @@ export function DashboardCharts({
 
   const proveedoresData = topProveedores.map((p) => ({
     id: p.id,
-    nombre: p.nombre.length > 25 ? p.nombre.slice(0, 25) + "..." : p.nombre,
+    nombre: p.nombre.length > 22 ? p.nombre.slice(0, 22) + "…" : p.nombre,
     nombreCompleto: p.nombre,
     monto: p.monto,
     contratos: p.total_contratos,
@@ -53,122 +120,138 @@ export function DashboardCharts({
   }
 
   return (
-    <div className="grid lg:grid-cols-2 gap-6">
-      {/* Top Proveedores */}
-      <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-        <h2 className="text-sm font-medium text-zinc-300 mb-4">
+    <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+
+      {/* ── Top 10 Proveedores (3/5) ─────────────────────────────────── */}
+      <div className="lg:col-span-3 rounded-xl border border-slate-200 dark:border-[#1a1a2e] bg-white dark:bg-[#0d0d1a] p-5 shadow-sm">
+        <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-4">
           Top 10 Proveedores por Monto
         </h2>
         {proveedoresData.length > 0 ? (
           <>
-            <ResponsiveContainer width="100%" height={250}>
+            <ResponsiveContainer width="100%" height={260}>
               <BarChart
                 data={proveedoresData}
                 layout="vertical"
-                margin={{ left: 120, right: 20 }}
+                margin={{ left: 8, right: 24, top: 0, bottom: 0 }}
               >
+                <defs>
+                  <linearGradient id="gradienteBarras" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#8b5cf6" />
+                    <stop offset="100%" stopColor="#00d4ff" />
+                  </linearGradient>
+                </defs>
                 <XAxis
                   type="number"
                   tickFormatter={formatearMontoCorto}
-                  tick={{ fill: "#71717a", fontSize: 11 }}
+                  tick={{ fill: "#94a3b8", fontSize: 10 }}
+                  axisLine={false}
+                  tickLine={false}
                 />
                 <YAxis
                   type="category"
                   dataKey="nombre"
-                  tick={{ fill: "#a1a1aa", fontSize: 11 }}
-                  width={120}
+                  tick={{ fill: "#94a3b8", fontSize: 10 }}
+                  width={140}
+                  axisLine={false}
+                  tickLine={false}
                 />
-                <Tooltip
-                  formatter={(value) => [
-                    `RD$${Number(value).toLocaleString()}`,
-                    "Monto",
-                  ]}
-                  labelFormatter={(_, payload) =>
-                    payload?.[0]?.payload?.nombreCompleto ?? ""
-                  }
-                  contentStyle={{
-                    background: "#18181b",
-                    border: "1px solid #27272a",
-                    borderRadius: 8,
-                    color: "#e4e4e7",
-                  }}
-                />
+                <Tooltip content={<TooltipOscuro />} cursor={{ fill: "rgba(139,92,246,0.05)" }} />
                 <Bar
                   dataKey="monto"
-                  fill="#3b82f6"
-                  radius={[0, 4, 4, 0]}
+                  radius={[0, 6, 6, 0]}
                   cursor="pointer"
                   onClick={(data) => {
                     if (data?.id) irAContratos(data.id as string);
                   }}
-                />
+                  name="Monto"
+                >
+                  {proveedoresData.map((_, i) => (
+                    <Cell key={i} fill={COLORES_BARRAS[i] ?? "#8b5cf6"} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
-            {/* Lista clickeable como complemento */}
-            <div className="mt-2 space-y-1">
-              {topProveedores.map((p, i) => (
+
+            {/* Lista clickeable */}
+            <div className="mt-3 space-y-0.5">
+              {topProveedores.slice(0, 5).map((p, i) => (
                 <button
                   key={p.id}
                   onClick={() => irAContratos(p.id)}
-                  className="flex items-center justify-between w-full rounded px-2 py-1 text-xs hover:bg-zinc-800 transition-colors group"
+                  className="flex items-center justify-between w-full rounded-lg px-2 py-1.5 text-xs hover:bg-slate-50 dark:hover:bg-[#13131f] transition-colors group"
                 >
-                  <span className="flex items-center gap-2">
-                    <span className="text-zinc-600 font-mono w-4">
-                      {i + 1}.
-                    </span>
-                    <span className="text-zinc-300 group-hover:text-blue-400">
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ background: COLORES_BARRAS[i] }}
+                    />
+                    <span className="text-slate-600 dark:text-zinc-300 group-hover:text-blue-600 dark:group-hover:text-cyan-400 truncate">
                       {p.nombre}
                     </span>
                   </span>
-                  <span className="text-zinc-500 font-mono">
-                    {formatearMonto(p.monto)} · {p.total_contratos} contratos
+                  <span className="text-slate-400 dark:text-zinc-500 font-mono ml-2 flex-shrink-0">
+                    {formatearMonto(p.monto)}
                   </span>
                 </button>
               ))}
             </div>
           </>
         ) : (
-          <p className="text-zinc-500 text-sm text-center py-12">
+          <p className="text-slate-400 dark:text-zinc-500 text-sm text-center py-16">
             Sin datos de proveedores
           </p>
         )}
       </div>
 
-      {/* Contratos por Mes */}
-      <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-        <h2 className="text-sm font-medium text-zinc-300 mb-4">
+      {/* ── Contratos por Mes (2/5) ──────────────────────────────────── */}
+      <div className="lg:col-span-2 rounded-xl border border-slate-200 dark:border-[#1a1a2e] bg-white dark:bg-[#0d0d1a] p-5 shadow-sm">
+        <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-4">
           Contratos por Mes
         </h2>
         {contratosPorMes.length > 0 ? (
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={contratosPorMes}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+          <ResponsiveContainer width="100%" height={320}>
+            <AreaChart data={contratosPorMes} margin={{ left: -10, right: 8, top: 8, bottom: 0 }}>
+              <defs>
+                <linearGradient id="gradienteArea" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#00d4ff" stopOpacity={0.25} />
+                  <stop offset="100%" stopColor="#00d4ff" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#e2e8f0"
+                className="dark:[&>line]:stroke-[#1a1a2e]"
+                vertical={false}
+              />
               <XAxis
                 dataKey="mes"
-                tick={{ fill: "#71717a", fontSize: 11 }}
+                tick={{ fill: "#94a3b8", fontSize: 10 }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v: string) => v.slice(5)}
               />
-              <YAxis tick={{ fill: "#71717a", fontSize: 11 }} />
-              <Tooltip
-                contentStyle={{
-                  background: "#18181b",
-                  border: "1px solid #27272a",
-                  borderRadius: 8,
-                  color: "#e4e4e7",
-                }}
+              <YAxis
+                tick={{ fill: "#94a3b8", fontSize: 10 }}
+                axisLine={false}
+                tickLine={false}
               />
-              <Line
+              <Tooltip content={<TooltipMes />} cursor={{ stroke: "#00d4ff", strokeWidth: 1, strokeDasharray: "4 2" }} />
+              <Area
                 type="monotone"
                 dataKey="cantidad"
-                stroke="#3b82f6"
+                stroke="#00d4ff"
                 strokeWidth={2}
-                dot={{ fill: "#3b82f6", r: 3 }}
+                fill="url(#gradienteArea)"
+                dot={{ fill: "#00d4ff", r: 3, strokeWidth: 0 }}
+                activeDot={{ r: 5, fill: "#00d4ff", strokeWidth: 2, stroke: "#fff" }}
                 name="Contratos"
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         ) : (
-          <p className="text-zinc-500 text-sm text-center py-12">
-            Sin datos historicos
+          <p className="text-slate-400 dark:text-zinc-500 text-sm text-center py-16">
+            Sin datos históricos
           </p>
         )}
       </div>
