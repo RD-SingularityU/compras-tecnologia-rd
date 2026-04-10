@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSorting, SortHeader } from "@/lib/use-sorting";
 import { BarraFiltrosGlobales } from "@/components/barra-filtros-globales";
 import type { FiltrosGlobales } from "@/lib/filtros-globales";
+import { PanelDeslizante } from "@/components/panel-deslizante";
 
 interface Proveedor {
   id: string;
@@ -24,6 +25,82 @@ function formatearMonto(valor: string | null): string {
   return `RD$${num.toLocaleString("es-DO", { maximumFractionDigits: 0 })}`;
 }
 
+function DetalleProveedor({ proveedor }: { proveedor: Proveedor }) {
+  const [contratos, setContratos] = useState<Array<{
+    id: string;
+    titulo: string;
+    valor: number;
+    estado: string;
+    institucion_nombre: string;
+    fecha_firma: string | null;
+  }>>([]);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    setCargando(true);
+    fetch(`/api/contratos?proveedor_id=${proveedor.id}&limite=10&pagina=1`)
+      .then((r) => r.json())
+      .then((data) => setContratos(data.datos ?? []))
+      .finally(() => setCargando(false));
+  }, [proveedor.id]);
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Card: RPE */}
+        <div className="col-span-2 rounded-lg bg-slate-50 dark:bg-[#0a0a14] border border-slate-200 dark:border-[#1a1a2e] px-4 py-3">
+          <p className="text-xs text-slate-400 dark:text-zinc-500">RPE</p>
+          <p className="font-mono text-sm text-slate-700 dark:text-zinc-300 mt-0.5">{proveedor.rnc || "—"}</p>
+        </div>
+        <div className="rounded-lg bg-slate-50 dark:bg-[#0a0a14] border border-slate-200 dark:border-[#1a1a2e] px-4 py-3">
+          <p className="text-xs text-slate-400 dark:text-zinc-500">Contratos</p>
+          <p className="text-xl font-bold font-mono text-cyan-600 dark:text-cyan-400">{proveedor.total_contratos?.toLocaleString("es-DO")}</p>
+        </div>
+        <div className="rounded-lg bg-slate-50 dark:bg-[#0a0a14] border border-slate-200 dark:border-[#1a1a2e] px-4 py-3">
+          <p className="text-xs text-slate-400 dark:text-zinc-500">Instituciones</p>
+          <p className="text-xl font-bold font-mono text-violet-600 dark:text-violet-400">{proveedor.num_instituciones?.toLocaleString("es-DO")}</p>
+        </div>
+        <div className="col-span-2 rounded-lg bg-slate-50 dark:bg-[#0a0a14] border border-slate-200 dark:border-[#1a1a2e] px-4 py-3">
+          <p className="text-xs text-slate-400 dark:text-zinc-500">Monto Total</p>
+          <p className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">{formatearMonto(proveedor.monto_total)}</p>
+        </div>
+      </div>
+
+      {/* Últimos contratos */}
+      <div>
+        <h3 className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-3">Últimos contratos</h3>
+        {cargando ? (
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-12 rounded-lg bg-slate-100 dark:bg-zinc-800 animate-pulse" />
+            ))}
+          </div>
+        ) : contratos.length === 0 ? (
+          <p className="text-sm text-slate-400 dark:text-zinc-500 text-center py-4">Sin contratos</p>
+        ) : (
+          <div className="space-y-2">
+            {contratos.map((c) => (
+              <div
+                key={c.id}
+                className="rounded-lg border border-slate-100 dark:border-[#1a1a2e] p-3 hover:bg-slate-50 dark:hover:bg-[#13131f] transition-colors"
+              >
+                <p className="text-xs text-slate-700 dark:text-zinc-200 line-clamp-1 font-medium">{c.titulo || "Sin título"}</p>
+                <div className="flex justify-between mt-1">
+                  <span className="text-[11px] text-slate-400 dark:text-zinc-500">{c.institucion_nombre || "—"}</span>
+                  <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
+                    {c.valor ? `RD$${Number(c.valor).toLocaleString("es-DO")}` : "—"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function PaginaProveedores() {
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [total, setTotal] = useState(0);
@@ -32,6 +109,7 @@ export default function PaginaProveedores() {
   const [cargando, setCargando] = useState(true);
   const [filtrosGlobales, setFiltrosGlobales] = useState<FiltrosGlobales>({});
   const [listo, setListo] = useState(false);
+  const [proveedorSeleccionado, setProveedorSeleccionado] = useState<Proveedor | null>(null);
   const { sort, toggleSort } = useSorting("monto_total");
 
   const onFiltrosChange = useCallback((filtros: FiltrosGlobales) => {
@@ -133,12 +211,12 @@ export default function PaginaProveedores() {
                   className="border-b border-slate-50 dark:border-[#13131f] hover:bg-slate-50 dark:hover:bg-[#13131f] transition-colors"
                 >
                   <td className="px-5 py-3.5">
-                    <a
-                      href={`/proveedores/${p.id}`}
-                      className="text-violet-600 dark:text-violet-400 hover:underline"
+                    <button
+                      onClick={() => setProveedorSeleccionado(p)}
+                      className="text-violet-600 dark:text-violet-400 hover:underline text-left"
                     >
                       {p.nombre}
-                    </a>
+                    </button>
                   </td>
                   <td className="px-5 py-3.5 text-slate-500 dark:text-zinc-400 font-mono text-xs">
                     {p.rnc || "\u2014"}
@@ -180,6 +258,14 @@ export default function PaginaProveedores() {
           </button>
         </div>
       )}
+
+      <PanelDeslizante
+        abierto={proveedorSeleccionado !== null}
+        onCerrar={() => setProveedorSeleccionado(null)}
+        titulo={proveedorSeleccionado?.nombre}
+      >
+        {proveedorSeleccionado && <DetalleProveedor proveedor={proveedorSeleccionado} />}
+      </PanelDeslizante>
     </div>
   );
 }

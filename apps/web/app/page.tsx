@@ -4,7 +4,7 @@ import Link from "next/link";
 import { getDb, sql } from "@/lib/db";
 import { construirCondicionesFiltros } from "@/lib/construir-filtros-sql";
 import { DashboardCharts } from "./dashboard-charts";
-import { DashboardFiltros } from "./dashboard-filtros";
+import { DashboardFiltros, DashboardFiltrosInline } from "./dashboard-filtros";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -86,23 +86,65 @@ async function obtenerTopProveedores(searchParams: URLSearchParams) {
 
 async function obtenerContratosPorMes(searchParams: URLSearchParams) {
   const { condiciones, joinsExtra } = construirCondicionesFiltros(searchParams, "estadisticas");
-  const baseCond = "c.fecha_firma IS NOT NULL";
   const extraCond = condiciones.length > 0 ? ` AND ${condiciones.join(" AND ")}` : "";
   const joins = joinsExtra.join(" ");
 
-  const result = await getDb().execute(sql.raw(`
+  // Primer intento: por fecha_firma mensual
+  const resultMensual = await getDb().execute(sql.raw(`
     SELECT
       TO_CHAR(c.fecha_firma, 'YYYY-MM') as mes,
       COUNT(*)::int as cantidad,
       COALESCE(SUM(c.valor::numeric), 0)::float as monto
     FROM contratos c
     ${joins}
-    WHERE ${baseCond}${extraCond}
+    WHERE c.fecha_firma IS NOT NULL${extraCond}
     GROUP BY TO_CHAR(c.fecha_firma, 'YYYY-MM')
     ORDER BY mes DESC
-    LIMIT 12
+    LIMIT 24
   `));
-  return (result.rows as Array<{ mes: string; cantidad: number; monto: number }>).reverse();
+
+  const filasMensuales = resultMensual.rows as Array<{ mes: string; cantidad: number; monto: number }>;
+  if (filasMensuales.length >= 6) {
+    return filasMensuales.reverse();
+  }
+
+  // Fallback: agrupado por año usando COALESCE de fechas disponibles
+  const resultAnual = await getDb().execute(sql.raw(`
+    SELECT
+      TO_CHAR(COALESCE(c.fecha_firma, c.periodo_inicio, c.creado_en), 'YYYY') as mes,
+      COUNT(*)::int as cantidad,
+      COALESCE(SUM(c.valor::numeric), 0)::float as monto
+    FROM contratos c
+    ${joins}
+    WHERE COALESCE(c.fecha_firma, c.periodo_inicio, c.creado_en) IS NOT NULL${extraCond}
+    GROUP BY TO_CHAR(COALESCE(c.fecha_firma, c.periodo_inicio, c.creado_en), 'YYYY')
+    ORDER BY mes DESC
+    LIMIT 10
+  `));
+
+  const filasAnuales = resultAnual.rows as Array<{ mes: string; cantidad: number; monto: number }>;
+  return filasAnuales.reverse();
+}
+
+async function obtenerDistribucionPorTipo(searchParams: URLSearchParams) {
+  const { condiciones, joinsExtra } = construirCondicionesFiltros(searchParams, "estadisticas");
+  const where = condiciones.length > 0 ? `WHERE ${condiciones.join(" AND ")}` : "";
+  const joins = joinsExtra.join(" ");
+
+  const result = await getDb().execute(sql.raw(`
+    SELECT
+      COALESCE(l.metodo_adquisicion, c.estado, 'Sin clasificar') as tipo,
+      COUNT(*)::int as cantidad,
+      COALESCE(SUM(c.valor::numeric), 0)::float as monto
+    FROM contratos c
+    LEFT JOIN adjudicaciones a ON a.id = c.adjudicacion_id
+    LEFT JOIN licitaciones l ON l.id = a.licitacion_id
+    ${joins} ${where}
+    GROUP BY COALESCE(l.metodo_adquisicion, c.estado, 'Sin clasificar')
+    ORDER BY cantidad DESC
+    LIMIT 8
+  `));
+  return result.rows as Array<{ tipo: string; cantidad: number; monto: number }>;
 }
 
 async function obtenerContratosRecientes() {
@@ -220,11 +262,12 @@ export default async function PaginaDashboard({
     if (typeof v === "string") sp.set(k, v);
   }
 
-  const [stats, topProveedores, contratosPorMes, contratosRecientes, alertasRecientes] =
+  const [stats, topProveedores, contratosPorMes, distribucionPorTipo, contratosRecientes, alertasRecientes] =
     await Promise.all([
       obtenerEstadisticas(sp),
       obtenerTopProveedores(sp),
       obtenerContratosPorMes(sp),
+      obtenerDistribucionPorTipo(sp),
       obtenerContratosRecientes(),
       obtenerAlertasRecientes(),
     ]);
@@ -233,7 +276,7 @@ export default async function PaginaDashboard({
     <div className="space-y-6">
 
       {/* ── Encabezado ──────────────────────────────────────────────────── */}
-      <div className="flex items-end justify-between">
+      <div className="flex items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">
             Dashboard
@@ -242,6 +285,7 @@ export default async function PaginaDashboard({
             Contrataciones públicas de tecnología en República Dominicana
           </p>
         </div>
+        <DashboardFiltrosInline />
       </div>
 
       {/* ── Filtros globales ─────────────────────────────────────────────── */}
@@ -262,7 +306,7 @@ export default async function PaginaDashboard({
               className={`rounded-xl border-l-4 ${cfg.borderClass} border border-slate-200 dark:border-[#1a1a2e] bg-white dark:bg-[#0d0d1a] p-5 flex items-start justify-between shadow-sm hover:shadow-md transition-shadow`}
             >
               <div>
-                <p className="text-xs font-medium text-slate-500 dark:text-zinc-500 uppercase tracking-widest mb-1">
+                <p className="text-sm font-semibold text-slate-500 dark:text-zinc-500 mb-1">
                   {cfg.titulo}
                 </p>
                 <p className={`text-3xl font-bold font-mono ${cfg.textClass}`}>
@@ -281,6 +325,7 @@ export default async function PaginaDashboard({
       <DashboardCharts
         topProveedores={topProveedores}
         contratosPorMes={contratosPorMes}
+        distribucionPorTipo={distribucionPorTipo}
       />
 
       {/* ── Fila inferior: Contratos recientes + Alertas ─────────────────── */}

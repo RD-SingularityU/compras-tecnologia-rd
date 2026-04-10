@@ -12,6 +12,9 @@ import {
   AreaChart,
   Area,
   CartesianGrid,
+  PieChart,
+  Pie,
+  Legend,
 } from "recharts";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -96,6 +99,7 @@ function TooltipMes({ active, payload, label }: {
 export function DashboardCharts({
   topProveedores,
   contratosPorMes,
+  distribucionPorTipo,
 }: {
   topProveedores: Array<{
     id: string;
@@ -104,8 +108,11 @@ export function DashboardCharts({
     monto: number;
   }>;
   contratosPorMes: Array<{ mes: string; cantidad: number; monto: number }>;
+  distribucionPorTipo: Array<{ tipo: string; cantidad: number; monto: number }>;
 }) {
   const router = useRouter();
+
+  const esAnual = contratosPorMes[0]?.mes?.length === 4;
 
   const proveedoresData = topProveedores.map((p) => ({
     id: p.id,
@@ -204,10 +211,10 @@ export function DashboardCharts({
         )}
       </div>
 
-      {/* ── Contratos por Mes (2/5) ──────────────────────────────────── */}
+      {/* ── Contratos por Mes / Año (2/5) ───────────────────────────── */}
       <div className="lg:col-span-2 rounded-xl border border-slate-200 dark:border-[#1a1a2e] bg-white dark:bg-[#0d0d1a] p-5 shadow-sm">
         <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-4">
-          Contratos por Mes
+          {esAnual ? "Contratos por Año" : "Contratos por Mes"}
         </h2>
         {contratosPorMes.length > 0 ? (
           <ResponsiveContainer width="100%" height={320}>
@@ -229,7 +236,7 @@ export function DashboardCharts({
                 tick={{ fill: "#94a3b8", fontSize: 10 }}
                 axisLine={false}
                 tickLine={false}
-                tickFormatter={(v: string) => v.slice(5)}
+                tickFormatter={(v: string) => esAnual ? v : v.slice(5)}
               />
               <YAxis
                 tick={{ fill: "#94a3b8", fontSize: 10 }}
@@ -252,6 +259,70 @@ export function DashboardCharts({
         ) : (
           <p className="text-slate-400 dark:text-zinc-500 text-sm text-center py-16">
             Sin datos históricos
+          </p>
+        )}
+      </div>
+
+      {/* ── Donut: Distribución por tipo de modalidad (fila completa) ─── */}
+      <div className="lg:col-span-5 rounded-xl border border-slate-200 dark:border-[#1a1a2e] bg-white dark:bg-[#0d0d1a] p-5 shadow-sm">
+        <h2 className="text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-4">
+          Distribución por Tipo de Modalidad
+        </h2>
+        {distribucionPorTipo.length > 0 ? (
+          <ResponsiveContainer width="100%" height={280}>
+            <PieChart>
+              <Pie
+                data={distribucionPorTipo}
+                dataKey="cantidad"
+                nameKey="tipo"
+                cx="50%"
+                cy="50%"
+                innerRadius={55}
+                outerRadius={90}
+                paddingAngle={2}
+              >
+                {distribucionPorTipo.map((_, i) => (
+                  <Cell key={i} fill={COLORES_BARRAS[i % COLORES_BARRAS.length]} />
+                ))}
+              </Pie>
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const d = payload[0];
+                  return (
+                    <div className="rounded-lg border border-slate-200 dark:border-[#2a2a40] bg-white dark:bg-[#0d0d1a] px-3 py-2 shadow-xl text-xs">
+                      <p className="font-medium text-slate-700 dark:text-zinc-200 mb-1 max-w-[220px] break-words">
+                        {d?.name}
+                      </p>
+                      <p className="text-slate-500 dark:text-zinc-400">
+                        Contratos:{" "}
+                        <span className="font-mono font-semibold text-slate-800 dark:text-zinc-200">
+                          {Number(d?.value).toLocaleString("es-DO")}
+                        </span>
+                      </p>
+                      <p className="text-slate-500 dark:text-zinc-400">
+                        Monto:{" "}
+                        <span className="font-mono font-semibold text-slate-800 dark:text-zinc-200">
+                          {formatearMonto(Number((d?.payload as { monto?: number })?.monto ?? 0))}
+                        </span>
+                      </p>
+                    </div>
+                  );
+                }}
+              />
+              <Legend
+                iconType="circle"
+                iconSize={8}
+                formatter={(value: string) =>
+                  value.length > 40 ? value.slice(0, 40) + "…" : value
+                }
+                wrapperStyle={{ fontSize: "11px", color: "#94a3b8" }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        ) : (
+          <p className="text-slate-400 dark:text-zinc-500 text-sm text-center py-16">
+            Sin datos de modalidad
           </p>
         )}
       </div>

@@ -18,6 +18,7 @@ export async function GET(request: Request) {
       h.hhi_score::float as hhi,
       h.num_proveedores,
       h.porcentaje_dominante::float as porcentaje_dominante,
+      h.proveedor_dominante_id,
       p.nombre as proveedor_dominante_nombre,
       CASE
         WHEN h.hhi_score::numeric < 1500 THEN 'competitivo'

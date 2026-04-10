@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
 import { BarraFiltrosGlobales } from "@/components/barra-filtros-globales";
+import { PanelDeslizante } from "@/components/panel-deslizante";
 import type { FiltrosGlobales } from "@/lib/filtros-globales";
 
 interface Alerta {
@@ -48,19 +48,6 @@ function clasesBordeIzq(s: string) {
     case "media": return "border-l-amber-500";
     default: return "border-l-blue-500";
   }
-}
-
-function urlEntidad(tipo: string, id: string): string | null {
-  if (!id || id === "00000000-0000-0000-0000-000000000000") return null;
-  if (tipo === "proveedor") return `/proveedores/${id}`;
-  if (tipo === "institucion") return `/instituciones/${id}`;
-  return null;
-}
-
-function labelEntidad(tipo: string): string {
-  if (tipo === "proveedor") return "Ver Proveedor";
-  if (tipo === "institucion") return "Ver Institución";
-  return "Ver Entidad";
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
@@ -159,165 +146,197 @@ export default function PaginaAlertas() {
         </select>
       </div>
 
-      {/* ── Layout Outlook ──────────────────────────────────────────── */}
-      <div className="flex gap-4 min-h-[500px]">
-
-        {/* Lista izquierda */}
-        <div className="w-2/5 flex flex-col rounded-xl border border-slate-200 dark:border-[#1a1a2e] bg-white dark:bg-[#0d0d1a] overflow-hidden shadow-sm">
-          <div className="px-4 py-3 border-b border-slate-100 dark:border-[#1a1a2e] flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">
-              {total.toLocaleString("es-DO")} alertas
-            </span>
-          </div>
-
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-50 dark:divide-[#13131f]">
-            {cargando ? (
-              Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="px-4 py-3 animate-pulse">
-                  <div className="flex gap-2 mb-2">
-                    <div className="h-4 w-12 bg-slate-200 dark:bg-zinc-800 rounded-full" />
-                    <div className="h-4 w-24 bg-slate-200 dark:bg-zinc-800 rounded" />
-                  </div>
-                  <div className="h-3 bg-slate-100 dark:bg-zinc-800/60 rounded w-full mb-1" />
-                  <div className="h-3 bg-slate-100 dark:bg-zinc-800/60 rounded w-3/4" />
-                </div>
-              ))
-            ) : alertas.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-zinc-500">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
-                  <line x1="4" y1="22" x2="4" y2="15"/>
-                </svg>
-                <p className="mt-2 text-sm">Sin alertas detectadas</p>
-              </div>
-            ) : (
-              alertas.map((a) => (
-                <button
-                  key={a.id}
-                  onClick={() => setSeleccionada(a)}
-                  className={`w-full text-left px-4 py-3 border-l-4 transition-colors ${clasesBordeIzq(a.severidad)} ${
-                    seleccionada?.id === a.id
-                      ? "bg-slate-100 dark:bg-[#13131f]"
-                      : "hover:bg-slate-50 dark:hover:bg-[#13131f]/60"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${clasesBadge(a.severidad)}`}>
-                      {a.severidad}
-                    </span>
-                    <span className="text-[10px] text-slate-400 dark:text-zinc-500 capitalize truncate">
-                      {TIPOS_LABEL[a.tipo] ?? a.tipo}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-zinc-300 line-clamp-2">
-                    {a.descripcion}
-                  </p>
-                </button>
-              ))
-            )}
-          </div>
-
-          {/* Paginacion */}
-          {totalPaginas > 1 && (
-            <div className="px-4 py-3 border-t border-slate-100 dark:border-[#1a1a2e] flex items-center justify-between">
-              <button
-                onClick={() => setPagina((p) => Math.max(1, p - 1))}
-                disabled={pagina === 1}
-                className="rounded-lg px-3 py-1.5 text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                ← Anterior
-              </button>
-              <span className="text-xs text-slate-400 dark:text-zinc-500">
-                {pagina} / {totalPaginas}
-              </span>
-              <button
-                onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
-                disabled={pagina >= totalPaginas}
-                className="rounded-lg px-3 py-1.5 text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                Siguiente →
-              </button>
-            </div>
-          )}
+      {/* ── Lista completa de alertas ───────────────────────────────── */}
+      <div className="rounded-xl border border-slate-200 dark:border-[#1a1a2e] bg-white dark:bg-[#0d0d1a] overflow-hidden shadow-sm">
+        {/* Header de la lista */}
+        <div className="px-4 py-3 border-b border-slate-100 dark:border-[#1a1a2e] flex items-center justify-between">
+          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">
+            {total.toLocaleString("es-DO")} alertas
+          </span>
         </div>
 
-        {/* Panel derecho — detalle */}
-        <div className="flex-1 rounded-xl border border-slate-200 dark:border-[#1a1a2e] bg-white dark:bg-[#0d0d1a] overflow-hidden shadow-sm">
-          {seleccionada ? (
-            <div className="h-full flex flex-col">
-              {/* Header del detalle */}
-              <div className={`px-6 py-5 border-b border-slate-100 dark:border-[#1a1a2e] border-l-4 ${clasesBordeIzq(seleccionada.severidad)}`}>
-                <div className="flex items-center gap-3 mb-2">
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${clasesBadge(seleccionada.severidad)}`}>
-                    {seleccionada.severidad}
-                  </span>
-                  <span className="text-sm font-medium text-slate-500 dark:text-zinc-400">
-                    {TIPOS_LABEL[seleccionada.tipo] ?? seleccionada.tipo}
-                  </span>
+        <div className="divide-y divide-slate-50 dark:divide-[#13131f]">
+          {cargando ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="px-4 py-3 animate-pulse">
+                <div className="flex gap-2 mb-2">
+                  <div className="h-4 w-12 bg-slate-200 dark:bg-zinc-800 rounded-full" />
+                  <div className="h-4 w-24 bg-slate-200 dark:bg-zinc-800 rounded" />
                 </div>
-                {seleccionada.detectado_en && (
-                  <p className="text-xs text-slate-400 dark:text-zinc-500">
-                    Detectado: {new Date(seleccionada.detectado_en).toLocaleDateString("es-DO", {
-                      day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit"
-                    })}
-                  </p>
-                )}
+                <div className="h-3 bg-slate-100 dark:bg-zinc-800/60 rounded w-full mb-1" />
+                <div className="h-3 bg-slate-100 dark:bg-zinc-800/60 rounded w-3/4" />
               </div>
-
-              {/* Cuerpo del detalle */}
-              <div className="flex-1 px-6 py-5 space-y-5 overflow-y-auto">
-                <div>
-                  <h3 className="text-xs font-medium text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">Descripción</h3>
-                  <p className="text-sm text-slate-700 dark:text-zinc-200 leading-relaxed">
-                    {seleccionada.descripcion}
-                  </p>
-                </div>
-
-                {seleccionada.datos && Object.keys(seleccionada.datos).length > 0 && (
-                  <div>
-                    <h3 className="text-xs font-medium text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">Datos adicionales</h3>
-                    <div className="rounded-lg bg-slate-50 dark:bg-[#0a0a14] border border-slate-200 dark:border-[#1a1a2e] p-4 space-y-2">
-                      {Object.entries(seleccionada.datos).map(([k, v]) => (
-                        <div key={k} className="flex justify-between gap-4 text-sm">
-                          <span className="text-slate-500 dark:text-zinc-500 capitalize">{k.replace(/_/g, " ")}</span>
-                          <span className="font-mono text-slate-700 dark:text-zinc-300 text-right">
-                            {typeof v === "number" ? v.toLocaleString("es-DO") : String(v)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Footer con boton de accion */}
-              {urlEntidad(seleccionada.entidad_tipo, seleccionada.entidad_id) && (
-                <div className="px-6 py-4 border-t border-slate-100 dark:border-[#1a1a2e]">
-                  <Link
-                    href={urlEntidad(seleccionada.entidad_tipo, seleccionada.entidad_id)!}
-                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 dark:bg-cyan-500 hover:bg-blue-700 dark:hover:bg-cyan-600 text-white px-4 py-2 text-sm font-medium transition-colors shadow-sm"
-                  >
-                    {labelEntidad(seleccionada.entidad_tipo)}
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M5 12h14M12 5l7 7-7 7"/>
-                    </svg>
-                  </Link>
-                </div>
-              )}
-            </div>
-          ) : (
-            /* Placeholder cuando nada esta seleccionado */
-            <div className="h-full flex flex-col items-center justify-center text-slate-300 dark:text-zinc-600">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25">
+            ))
+          ) : alertas.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-zinc-500">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
                 <line x1="4" y1="22" x2="4" y2="15"/>
               </svg>
-              <p className="mt-4 text-sm font-medium">Selecciona una alerta</p>
-              <p className="mt-1 text-xs">para ver los detalles aquí</p>
+              <p className="mt-2 text-sm">Sin alertas detectadas</p>
             </div>
+          ) : (
+            alertas.map((a) => (
+              <button
+                key={a.id}
+                onClick={() => setSeleccionada(a)}
+                className={`w-full text-left px-4 py-3 border-l-4 transition-colors ${clasesBordeIzq(a.severidad)} hover:bg-slate-50 dark:hover:bg-[#13131f]/60`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${clasesBadge(a.severidad)}`}>
+                    {a.severidad}
+                  </span>
+                  <span className="text-[10px] text-slate-400 dark:text-zinc-500 capitalize truncate">
+                    {TIPOS_LABEL[a.tipo] ?? a.tipo}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-zinc-300 line-clamp-2">
+                  {a.descripcion}
+                </p>
+              </button>
+            ))
           )}
         </div>
+
+        {/* Paginacion */}
+        {totalPaginas > 1 && (
+          <div className="px-4 py-3 border-t border-slate-100 dark:border-[#1a1a2e] flex items-center justify-between">
+            <button
+              onClick={() => setPagina((p) => Math.max(1, p - 1))}
+              disabled={pagina === 1}
+              className="rounded-lg px-3 py-1.5 text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              ← Anterior
+            </button>
+            <span className="text-xs text-slate-400 dark:text-zinc-500">
+              {pagina} / {totalPaginas}
+            </span>
+            <button
+              onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+              disabled={pagina >= totalPaginas}
+              className="rounded-lg px-3 py-1.5 text-xs font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              Siguiente →
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* ── Panel deslizante de detalle de alerta ──────────────────── */}
+      <PanelDeslizante
+        abierto={seleccionada !== null}
+        onCerrar={() => setSeleccionada(null)}
+        titulo={seleccionada ? (TIPOS_LABEL[seleccionada.tipo] ?? seleccionada.tipo) : undefined}
+      >
+        {seleccionada && (
+          <div className="p-6 space-y-6">
+            {/* Header con badge de severidad y tipo */}
+            <div className={`-mx-6 -mt-6 px-6 py-5 border-b border-slate-100 dark:border-[#1a1a2e] border-l-4 ${clasesBordeIzq(seleccionada.severidad)}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${clasesBadge(seleccionada.severidad)}`}>
+                  {seleccionada.severidad}
+                </span>
+                <span className="text-sm text-slate-500 dark:text-zinc-400">
+                  {TIPOS_LABEL[seleccionada.tipo] ?? seleccionada.tipo}
+                </span>
+              </div>
+              {seleccionada.detectado_en && (
+                <p className="text-xs text-slate-400 dark:text-zinc-500">
+                  Detectado:{" "}
+                  {new Date(seleccionada.detectado_en).toLocaleDateString("es-DO", {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              )}
+            </div>
+
+            {/* Descripción */}
+            <div>
+              <h3 className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">
+                Descripción
+              </h3>
+              <p className="text-sm text-slate-700 dark:text-zinc-200 leading-relaxed">
+                {seleccionada.descripcion}
+              </p>
+            </div>
+
+            {/* Datos adicionales (excluye claves con _id) */}
+            {seleccionada.datos &&
+              Object.keys(seleccionada.datos).filter(
+                (k) => !k.endsWith("_id") && k !== "id"
+              ).length > 0 && (
+                <div>
+                  <h3 className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">
+                    Datos
+                  </h3>
+                  <div className="rounded-lg bg-slate-50 dark:bg-[#0a0a14] border border-slate-200 dark:border-[#1a1a2e] divide-y divide-slate-100 dark:divide-[#1a1a2e]">
+                    {Object.entries(seleccionada.datos)
+                      .filter(([k]) => !k.endsWith("_id") && k !== "id")
+                      .map(([k, v]) => {
+                        const esMoneda =
+                          k.toLowerCase().includes("monto") ||
+                          k.toLowerCase().includes("valor");
+                        const valorFormateado =
+                          esMoneda && typeof v === "number"
+                            ? `RD$${v.toLocaleString("es-DO", { maximumFractionDigits: 0 })}`
+                            : typeof v === "number"
+                            ? v.toLocaleString("es-DO")
+                            : String(v);
+                        return (
+                          <div
+                            key={k}
+                            className="flex justify-between gap-4 px-4 py-2.5 text-sm"
+                          >
+                            <span className="text-slate-500 dark:text-zinc-500 capitalize">
+                              {k.replace(/_/g, " ")}
+                            </span>
+                            <span className="font-mono text-slate-700 dark:text-zinc-300 text-right">
+                              {valorFormateado}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+
+            {/* Nombre proveedor clickeable */}
+            {seleccionada.datos?.proveedor_nombre &&
+              seleccionada.datos?.proveedor_id && (
+                <div>
+                  <h3 className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">
+                    Proveedor
+                  </h3>
+                  <a
+                    href={`/proveedores/${seleccionada.datos.proveedor_id}`}
+                    className="text-violet-600 dark:text-violet-400 hover:underline text-sm font-medium"
+                  >
+                    {String(seleccionada.datos.proveedor_nombre)} →
+                  </a>
+                </div>
+              )}
+
+            {/* IDs internos — muy sutiles */}
+            <div className="pt-4 border-t border-slate-100 dark:border-[#1a1a2e]">
+              <p className="text-[10px] font-medium text-slate-300 dark:text-zinc-700 uppercase tracking-wider mb-1">
+                IDs internos
+              </p>
+              <p className="text-[10px] font-mono text-slate-300 dark:text-zinc-700">
+                alerta: {seleccionada.id}
+              </p>
+              {seleccionada.entidad_id && (
+                <p className="text-[10px] font-mono text-slate-300 dark:text-zinc-700">
+                  entidad: {seleccionada.entidad_id}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </PanelDeslizante>
     </div>
   );
 }

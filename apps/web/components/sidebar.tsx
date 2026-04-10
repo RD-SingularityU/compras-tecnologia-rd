@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: <IconGrid /> },
@@ -15,50 +16,185 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [expandido, setExpandido] = useState(false);
+  const [modalAbierto, setModalAbierto] = useState(false);
+
+  // Persistir estado en localStorage
+  useEffect(() => {
+    const guardado = localStorage.getItem("sidebar-expandido");
+    if (guardado === "true") setExpandido(true);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("sidebar-expandido", String(expandido));
+  }, [expandido]);
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-16 flex flex-col items-center pt-4 pb-6 gap-1 bg-white dark:bg-[#0a0a14] border-r border-slate-200 dark:border-[#1a1a2e] z-50">
-      {/* Logo */}
-      <Link
-        href="/"
-        className="mb-5 flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 text-white font-bold text-xs shadow-lg shadow-blue-500/20"
-        title="Compras Tech RD"
+    <>
+      <aside
+        className={`fixed left-0 top-0 h-full flex flex-col pt-4 pb-4 gap-1 bg-white dark:bg-[#0a0a14] border-r border-slate-200 dark:border-[#1a1a2e] z-50 transition-all duration-300 ease-out overflow-hidden ${
+          expandido ? "w-[200px] items-start" : "w-16 items-center"
+        }`}
       >
-        CT
-      </Link>
+        {/* Logo */}
+        <Link
+          href="/"
+          className={`mb-5 flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 text-white font-bold text-xs shadow-lg shadow-blue-500/20 shrink-0 ${
+            expandido ? "ml-3.5" : ""
+          }`}
+          title="Compras Tech RD"
+        >
+          CT
+        </Link>
 
-      {/* Nav items */}
-      <div className="flex flex-col items-center gap-1 flex-1">
-        {navItems.map((item) => {
-          const activo =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={item.label}
-              className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 group ${
-                activo
-                  ? "bg-blue-500/10 dark:bg-cyan-400/10 text-blue-600 dark:text-cyan-400"
-                  : "text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800/60"
-              }`}
-            >
-              {activo && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-blue-500 dark:bg-cyan-400" />
-              )}
-              {item.icon}
+        {/* Nav items */}
+        <div className={`flex flex-col gap-1 flex-1 w-full ${expandido ? "px-2" : "items-center"}`}>
+          {navItems.map((item) => {
+            const activo =
+              item.href === "/"
+                ? pathname === "/"
+                : pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                title={expandido ? undefined : item.label}
+                className={`relative flex items-center gap-2.5 rounded-xl transition-all duration-200 group shrink-0 ${
+                  expandido
+                    ? "w-full px-4 h-10"
+                    : "w-10 h-10 justify-center"
+                } ${
+                  activo
+                    ? "bg-blue-500/10 dark:bg-cyan-400/10 text-blue-600 dark:text-cyan-400"
+                    : "text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800/60"
+                }`}
+              >
+                {activo && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-blue-500 dark:bg-cyan-400" />
+                )}
+                <span className="shrink-0">{item.icon}</span>
 
-              {/* Tooltip */}
+                {/* Label visible cuando expandido */}
+                {expandido && (
+                  <span className="text-sm font-medium whitespace-nowrap">{item.label}</span>
+                )}
+
+                {/* Tooltip solo cuando colapsado */}
+                {!expandido && (
+                  <span className="absolute left-14 bg-zinc-900 dark:bg-zinc-800 text-zinc-100 text-xs px-2 py-1 rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-xl border border-zinc-700 z-50">
+                    {item.label}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Sección inferior: Acerca de + Toggle */}
+        <div className={`flex flex-col gap-1 w-full ${expandido ? "px-2" : "items-center"}`}>
+          {/* Separador */}
+          <div className={`h-px bg-slate-200 dark:bg-zinc-800 my-1 ${expandido ? "mx-2" : "w-8"}`} />
+
+          {/* Botón Acerca de */}
+          <button
+            onClick={() => setModalAbierto(true)}
+            title={expandido ? undefined : "Acerca de"}
+            className={`relative flex items-center gap-2.5 rounded-xl transition-all duration-200 group text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800/60 ${
+              expandido ? "w-full px-4 h-10" : "w-10 h-10 justify-center"
+            }`}
+          >
+            <span className="shrink-0"><IconInfo /></span>
+            {expandido && (
+              <span className="text-sm font-medium whitespace-nowrap">Acerca de</span>
+            )}
+            {!expandido && (
               <span className="absolute left-14 bg-zinc-900 dark:bg-zinc-800 text-zinc-100 text-xs px-2 py-1 rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-xl border border-zinc-700 z-50">
-                {item.label}
+                Acerca de
               </span>
-            </Link>
-          );
-        })}
-      </div>
-    </aside>
+            )}
+          </button>
+
+          {/* Botón toggle expandir/colapsar */}
+          <button
+            onClick={() => setExpandido(!expandido)}
+            title={expandido ? "Colapsar sidebar" : "Expandir sidebar"}
+            className={`relative flex items-center gap-2.5 rounded-xl transition-all duration-200 group text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800/60 ${
+              expandido ? "w-full px-4 h-10" : "w-10 h-10 justify-center"
+            }`}
+          >
+            <span className="shrink-0">
+              {expandido ? <IconChevronLeft /> : <IconChevronRight />}
+            </span>
+            {expandido && (
+              <span className="text-sm font-medium whitespace-nowrap">Colapsar</span>
+            )}
+          </button>
+        </div>
+      </aside>
+
+      {/* Modal Acerca de */}
+      {modalAbierto && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setModalAbierto(false)}
+            className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm"
+          />
+          {/* Modal centrado */}
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-lg rounded-2xl border border-slate-200 dark:border-[#1a1a2e] bg-white dark:bg-[#0d0d1a] shadow-2xl p-8">
+            <button
+              onClick={() => setModalAbierto(false)}
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800/60 transition-colors text-sm"
+            >
+              ✕
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                CT
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-zinc-100">Compras Tech RD</h2>
+                <p className="text-sm text-slate-500 dark:text-zinc-400">Transparencia en contrataciones públicas</p>
+              </div>
+            </div>
+
+            <div className="space-y-4 text-sm text-slate-600 dark:text-zinc-300 leading-relaxed">
+              <p>Esta plataforma visualiza y analiza las contrataciones públicas de tecnología en la República Dominicana, utilizando datos oficiales de la DGCP (Dirección General de Contrataciones Públicas).</p>
+              <p>El objetivo es promover la transparencia, facilitar la rendición de cuentas y detectar patrones que puedan indicar irregularidades en el uso de los fondos públicos.</p>
+
+              <div className="grid grid-cols-3 gap-3 mt-6 pt-4 border-t border-slate-100 dark:border-[#1a1a2e]">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400 font-mono">54K+</p>
+                  <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">Contratos</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-violet-600 dark:text-violet-400 font-mono">3.6K+</p>
+                  <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">Proveedores</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 font-mono">200+</p>
+                  <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">Instituciones</p>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-400 dark:text-zinc-500 mt-6">
+              Fuente:{" "}
+              <a
+                href="https://datosabiertos.dgcp.gob.do"
+                target="_blank"
+                rel="noopener"
+                className="underline hover:text-slate-600 dark:hover:text-zinc-300"
+              >
+                datosabiertos.dgcp.gob.do
+              </a>{" "}
+              · Datos actualizados 2024–2025
+            </p>
+          </div>
+        </>
+      )}
+    </>
   );
 }
 
@@ -140,6 +276,32 @@ function IconBandera() {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
       <line x1="4" y1="22" x2="4" y2="15" />
+    </svg>
+  );
+}
+
+function IconInfo() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+  );
+}
+
+function IconChevronRight() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
+
+function IconChevronLeft() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="15 18 9 12 15 6" />
     </svg>
   );
 }

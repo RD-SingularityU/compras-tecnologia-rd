@@ -48,6 +48,14 @@ export default function RootLayout({
           <main className="flex-1 px-6 py-6">
             {children}
           </main>
+
+          {/* Footer visible al llegar al fondo del scroll */}
+          <footer className="border-t border-slate-200 dark:border-[#1a1a2e] bg-white/60 dark:bg-[#0a0a14]/60 px-6 py-4 pl-6">
+            <div className="flex items-center justify-between text-xs text-slate-400 dark:text-zinc-500">
+              <span>Compras Tech RD — Transparencia en contrataciones públicas de tecnología</span>
+              <span>Datos: <a href="https://datosabiertos.dgcp.gob.do" target="_blank" rel="noopener" className="hover:text-slate-600 dark:hover:text-zinc-300 underline underline-offset-2">DGCP API</a> · República Dominicana</span>
+            </div>
+          </footer>
         </div>
       </body>
     </html>
