@@ -10,7 +10,7 @@ const navItems = [
   { href: "/instituciones", label: "Instituciones", icon: <IconEdificio /> },
   { href: "/red", label: "Red", icon: <IconRed /> },
   { href: "/concentracion", label: "HHI", icon: <IconBarras /> },
-  { href: "/alertas", label: "Alertas", icon: <IconCampana /> },
+  { href: "/alertas", label: "Alertas", icon: <IconBandera /> },
 ];
 
 export function Sidebar() {
@@ -135,11 +135,11 @@ function IconBarras() {
   );
 }
 
-function IconCampana() {
+function IconBandera() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
-      <path d="M13.73 21a2 2 0 01-3.46 0" />
+      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+      <line x1="4" y1="22" x2="4" y2="15" />
     </svg>
   );
 }

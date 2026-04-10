@@ -7,6 +7,8 @@ export async function GET(request: Request) {
   const tipo = searchParams.get("tipo");
   const severidad = searchParams.get("severidad");
   const limite = Math.min(parseInt(searchParams.get("limite") ?? "50"), 200);
+  const pagina = Math.max(1, parseInt(searchParams.get("pagina") ?? "1"));
+  const offset = (pagina - 1) * limite;
 
   // Filtros globales
   const { condiciones } = construirCondicionesFiltros(searchParams, "alertas");
@@ -30,10 +32,10 @@ export async function GET(request: Request) {
     ORDER BY
       CASE a.severidad WHEN 'alta' THEN 1 WHEN 'media' THEN 2 ELSE 3 END,
       a.detectado_en DESC
-    LIMIT ${limite}
+    LIMIT ${limite} OFFSET ${offset}
   `));
 
-  // El resumen tambien se filtra
+  // El resumen y total tambien se filtra
   const resumenWhere = where.replace(/\ba\./g, "alertas_r.");
   const countResult = await getDb().execute(sql.raw(`
     SELECT
@@ -45,8 +47,11 @@ export async function GET(request: Request) {
     ${resumenWhere.replace(/\ba\./g, "alertas_r.")}
   `));
 
+  const resumen = countResult.rows[0] as { alta: number; media: number; baja: number; total: number };
+
   return NextResponse.json({
     datos: result.rows,
-    resumen: countResult.rows[0],
+    resumen,
+    total: Number(resumen?.total ?? 0),
   });
 }

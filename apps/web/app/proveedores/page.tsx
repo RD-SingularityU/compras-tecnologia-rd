@@ -17,9 +17,11 @@ interface Proveedor {
 function formatearMonto(valor: string | null): string {
   if (!valor) return "RD$0";
   const num = parseFloat(valor);
-  if (num >= 1_000_000) return `RD$${(num / 1_000_000).toFixed(1)}M`;
-  if (num >= 1_000) return `RD$${(num / 1_000).toFixed(0)}K`;
-  return `RD$${num.toFixed(0)}`;
+  if (isNaN(num)) return "RD$0";
+  if (num >= 1_000_000_000) return `RD$${(num / 1_000_000_000).toFixed(2)}B`;
+  if (num >= 1_000_000) return `RD$${(num / 1_000_000).toFixed(2)}M`;
+  if (num >= 1_000) return `RD$${num.toLocaleString("es-DO", { maximumFractionDigits: 0 })}`;
+  return `RD$${num.toLocaleString("es-DO", { maximumFractionDigits: 0 })}`;
 }
 
 export default function PaginaProveedores() {
@@ -70,20 +72,20 @@ export default function PaginaProveedores() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Proveedores</h1>
-          <p className="text-sm text-zinc-400">
-            {total.toLocaleString()} proveedores
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-100">Proveedores</h1>
+          <p className="text-sm text-slate-500 dark:text-zinc-400">
+            {total.toLocaleString("es-DO")} proveedores registrados
           </p>
         </div>
         <input
           type="text"
-          placeholder="Buscar por nombre o RNC..."
+          placeholder="Buscar por nombre o RPE..."
           value={busqueda}
           onChange={(e) => {
             setBusqueda(e.target.value);
             setPagina(1);
           }}
-          className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 w-64 focus:outline-none focus:border-blue-500"
+          className="rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-slate-900 dark:text-zinc-200 placeholder-slate-400 dark:placeholder-zinc-500 w-72 focus:outline-none focus:border-blue-500 dark:focus:border-cyan-500 shadow-sm"
         />
       </div>
 
@@ -93,27 +95,34 @@ export default function PaginaProveedores() {
         onListo={onBarraLista}
       />
 
-      <div className="rounded-lg border border-zinc-800 overflow-hidden">
+      <div className="rounded-xl border border-slate-200 dark:border-[#1a1a2e] bg-white dark:bg-[#0d0d1a] overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-zinc-800 bg-zinc-900/50">
-              <SortHeader columna="nombre" label="Proveedor" sort={sort} onSort={toggleSort} className="text-left" />
-              <th className="text-left px-4 py-3 text-zinc-400 font-medium">RNC</th>
-              <SortHeader columna="total_contratos" label="Contratos" sort={sort} onSort={toggleSort} className="text-right" />
-              <SortHeader columna="monto_total" label="Monto Total" sort={sort} onSort={toggleSort} className="text-right" />
-              <SortHeader columna="num_instituciones" label="Instituciones" sort={sort} onSort={toggleSort} className="text-right" />
+            <tr className="border-b border-slate-100 dark:border-[#1a1a2e] bg-slate-50/80 dark:bg-[#0a0a14]/60">
+              <SortHeader columna="nombre" label="Proveedor" sort={sort} onSort={toggleSort} className="text-left px-5 py-3 text-xs font-medium text-slate-400 dark:text-zinc-500 uppercase tracking-wider" />
+              <th className="text-left px-5 py-3 text-xs font-medium text-slate-400 dark:text-zinc-500 uppercase tracking-wider">RPE</th>
+              <SortHeader columna="total_contratos" label="Contratos" sort={sort} onSort={toggleSort} className="text-right px-5 py-3 text-xs font-medium text-slate-400 dark:text-zinc-500 uppercase tracking-wider" />
+              <SortHeader columna="monto_total" label="Monto Total" sort={sort} onSort={toggleSort} className="text-right px-5 py-3 text-xs font-medium text-slate-400 dark:text-zinc-500 uppercase tracking-wider" />
+              <SortHeader columna="num_instituciones" label="Instituciones" sort={sort} onSort={toggleSort} className="text-right px-5 py-3 text-xs font-medium text-slate-400 dark:text-zinc-500 uppercase tracking-wider" />
             </tr>
           </thead>
           <tbody>
             {cargando ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-zinc-500">
-                  Cargando...
-                </td>
-              </tr>
+              Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i} className="border-b border-slate-50 dark:border-[#13131f]">
+                  {[1, 2, 3, 4, 5].map((j) => (
+                    <td key={j} className="px-5 py-4">
+                      <div
+                        className="h-3 bg-slate-200 dark:bg-zinc-800 rounded animate-pulse"
+                        style={{ width: j === 1 ? "60%" : j === 2 ? "40%" : "30%" }}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))
             ) : proveedores.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-zinc-500">
+                <td colSpan={5} className="px-5 py-8 text-center text-slate-500 dark:text-zinc-500">
                   No se encontraron proveedores
                 </td>
               </tr>
@@ -121,27 +130,27 @@ export default function PaginaProveedores() {
               proveedores.map((p) => (
                 <tr
                   key={p.id}
-                  className="border-b border-zinc-800/50 hover:bg-zinc-900/50"
+                  className="border-b border-slate-50 dark:border-[#13131f] hover:bg-slate-50 dark:hover:bg-[#13131f] transition-colors"
                 >
-                  <td className="px-4 py-3">
+                  <td className="px-5 py-3.5">
                     <a
                       href={`/proveedores/${p.id}`}
-                      className="text-zinc-200 hover:text-blue-400"
+                      className="text-violet-600 dark:text-violet-400 hover:underline"
                     >
                       {p.nombre}
                     </a>
                   </td>
-                  <td className="px-4 py-3 text-zinc-400 font-mono text-xs">
+                  <td className="px-5 py-3.5 text-slate-500 dark:text-zinc-400 font-mono text-xs">
                     {p.rnc || "\u2014"}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono">
-                    {p.total_contratos}
+                  <td className="px-5 py-3.5 text-right font-mono text-slate-900 dark:text-zinc-100">
+                    {p.total_contratos.toLocaleString("es-DO")}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-zinc-200">
+                  <td className="px-5 py-3.5 text-right font-mono text-slate-900 dark:text-zinc-100">
                     {formatearMonto(p.monto_total)}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono">
-                    {p.num_instituciones}
+                  <td className="px-5 py-3.5 text-right font-mono text-slate-900 dark:text-zinc-100">
+                    {p.num_instituciones.toLocaleString("es-DO")}
                   </td>
                 </tr>
               ))
@@ -155,17 +164,17 @@ export default function PaginaProveedores() {
           <button
             onClick={() => setPagina((p) => Math.max(1, p - 1))}
             disabled={pagina === 1}
-            className="rounded px-3 py-1.5 text-sm border border-zinc-700 text-zinc-300 hover:bg-zinc-800 disabled:opacity-30"
+            className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors bg-white dark:bg-zinc-900"
           >
             Anterior
           </button>
-          <span className="text-sm text-zinc-400">
-            Pagina {pagina} de {totalPaginas}
+          <span className="text-sm text-slate-500 dark:text-zinc-400">
+            Página {pagina} de {totalPaginas}
           </span>
           <button
             onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
             disabled={pagina >= totalPaginas}
-            className="rounded px-3 py-1.5 text-sm border border-zinc-700 text-zinc-300 hover:bg-zinc-800 disabled:opacity-30"
+            className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors bg-white dark:bg-zinc-900"
           >
             Siguiente
           </button>
