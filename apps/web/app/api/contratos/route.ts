@@ -33,6 +33,10 @@ export async function GET(request: Request) {
       `c.id IN (SELECT contrato_id FROM contrato_proveedores WHERE proveedor_id = '${proveedorId}')`
     );
   }
+  const institucionId = searchParams.get("institucion_id");
+  if (institucionId) {
+    condiciones.push(`c.institucion_id = '${institucionId}'`);
+  }
 
   const where =
     condiciones.length > 0 ? `WHERE ${condiciones.join(" AND ")}` : "";

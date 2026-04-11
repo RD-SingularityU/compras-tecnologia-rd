@@ -27,15 +27,15 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased min-h-screen bg-slate-50 dark:bg-[#05050a] text-slate-900 dark:text-zinc-100`}
+        className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased bg-slate-50 dark:bg-[#05050a] text-slate-900 dark:text-zinc-100 overflow-hidden`}
       >
         {/* Sidebar de navegación izquierdo */}
         <Sidebar />
 
-        {/* Contenido principal — desplazado a la derecha del sidebar (w-16 = 64px) */}
-        <div className="pl-16 flex flex-col min-h-screen">
+        {/* Contenido principal — altura exacta del viewport, sin scroll en body */}
+        <div className="pl-16 flex flex-col h-screen">
           {/* Header global */}
-          <header className="border-b border-slate-200 dark:border-[#1a1a2e] bg-white/80 dark:bg-[#0a0a14]/80 backdrop-blur-sm sticky top-0 z-40">
+          <header className="flex-shrink-0 border-b border-slate-200 dark:border-[#1a1a2e] bg-white/80 dark:bg-[#0a0a14]/80 backdrop-blur-sm z-40">
             <div className="px-6 flex h-12 items-center justify-between">
               <span className="text-sm text-slate-400 dark:text-zinc-500 font-medium tracking-wide">
                 Compras Tech RD
@@ -44,13 +44,13 @@ export default function RootLayout({
             </div>
           </header>
 
-          {/* Área de contenido — sin max-w para aprovechar todo el viewport */}
-          <main className="flex-1 px-6 py-6">
+          {/* Área de contenido — scroll interno, el footer siempre es visible */}
+          <main className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
             {children}
           </main>
 
-          {/* Footer visible al llegar al fondo del scroll */}
-          <footer className="border-t border-slate-200 dark:border-[#1a1a2e] bg-white/60 dark:bg-[#0a0a14]/60 px-6 py-4 pl-6">
+          {/* Footer siempre visible al pie */}
+          <footer className="flex-shrink-0 border-t border-slate-200 dark:border-[#1a1a2e] bg-white/60 dark:bg-[#0a0a14]/60 px-6 py-3">
             <div className="flex items-center justify-between text-xs text-slate-400 dark:text-zinc-500">
               <span>Compras Tech RD — Transparencia en contrataciones públicas de tecnología</span>
               <span>Datos: <a href="https://datosabiertos.dgcp.gob.do" target="_blank" rel="noopener" className="hover:text-slate-600 dark:hover:text-zinc-300 underline underline-offset-2">DGCP API</a> · República Dominicana</span>
